@@ -8,15 +8,13 @@
 
 
 
-
 library(shiny)
-
 
 # Define UI and Server for application in seperate files 
 source('ui.R', local = TRUE)
 source(server.R)
 
-
+# this is cool
 
 
 

@@ -1,27 +1,65 @@
 library(shinythemes)
+
 library(sortable)
+items <- c("AGE","MODEL",	"DEALERSHIP"	,"CUSTOMER_TYPE",	"USER_CUSTOMISED",
+           "COUNTRY",	"GEO_TYPE",	"FAULT_TYPE")
+
 ui <- fluidPage(
+  
   theme = shinytheme("flatly"),
   
   # Application title
   titlePanel("Subgroup explorer"),
+  tags$head(tags$script(src = "message-handler.js")),
   
   # Sidebar for user inputs 
   sidebarLayout(
     sidebarPanel(
       h2("Inputs"),
-      sliderInput( 
-                  "bins",
-                  "Number of bins:",
-                  min = 1,
-                  max = 50,
-                  value = 30),
+      
       fileInput(inputId = "fileIn", label = "Select a file with Rules", 
                 multiple = FALSE,
                 accept = c("text/csv",
                            "text/comma-separated-values,text/plain",
                            ".csv")
-                )
+      ),
+      actionButton("btUpload", "Use selected file",icon("file-upload"), class= "btn-success"),
+      
+      
+      textInput("txt_filter", "Filter by String", value = ""),
+      fluidRow(1, "moin"),
+      actionButton("do", "Show Msg"),
+      
+      
+      
+      actionButton("rv1l", "Data set 1 load"),
+      actionButton("rv2", "Data set 2"),
+      
+      sliderInput( 
+                  "slSupp",
+                  "Min Support:",
+                  min = 0,
+                  max = 1,
+                  value = 0),
+      
+      
+      
+
+      bucket_list(
+        header = "This is a bucket list. You can drag items between the lists.",
+        add_rank_list(
+          text = "Drag from here",
+          labels = items
+        ),
+        add_rank_list(
+          text = "to here LHS",
+          labels = NULL
+        ),
+        add_rank_list(
+          text = "to here RHS",
+          labels = NULL
+        )
+      )
     
       
     ),
@@ -29,14 +67,16 @@ ui <- fluidPage(
   # MainPanel for viz
   
     mainPanel( 
+      verbatimTextOutput("ruleCount"),
+      plotlyOutput("TargetBox"),
   # tabset for different vizs
-      tabsetPanel(
-        #tabPanel(title = "textout", verbatimTextOutput("binsNum"),
-        tabPanel(title = "Figure 1", plotOutput("distPlot")),
-        tabPanel(title = "Figure 2", tableOutput("fileTable")),
-        tabPanel(title = "Figure 3", plotOutput("distPlot3"))
-        
-      )
+        tabsetPanel(
+          #tabPanel(title = "textout", verbatimTextOutput("binsNum"),
+          tabPanel(title = "Main Info", plotOutput("distPlot")),
+          tabPanel(title = "Data table", tableOutput("fileTable")),
+          tabPanel(title = "Figure 3", plotOutput("distPlot3"))
+          
+        )
       
     )
   )
