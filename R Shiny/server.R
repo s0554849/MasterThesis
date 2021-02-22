@@ -10,7 +10,7 @@ df <- read.csv("/Users/benjaminwuthe/Library/Mobile Documents/com~apple~CloudDoc
 server <- function(input, output, session) {
   print("Start")
   
-  data()
+  #data()
 
   
   # Observer Function- to update all views
@@ -19,10 +19,11 @@ server <- function(input, output, session) {
       type = 'testmessage',
       message = 'Thank you for clicking')
   })
-
-data<-  observeEvent(input$btUpload, {
+rv <-reactiveValues()
+data <-  observeEvent(input$btUpload, {
     print("BT clicked")
     df <<- read.csv(input$fileIn$datapath,sep = ",")
+    rv$data <- df
   })
   
   # Ovserve all actions
@@ -57,6 +58,7 @@ data<-  observeEvent(input$btUpload, {
   data <- eventReactive(input$txt_filter,{
       txt <- input$txt_filter
       if (txt!=""){
+        print("Filter me")
         txtlist <- strsplit(txt, ';')
 
         for (i in 1:length(txtlist[[1]])){
@@ -64,9 +66,11 @@ data<-  observeEvent(input$btUpload, {
           print(paste("Filter ", filt))
           df <- filter(df, grepl(filt, rules, fixed = TRUE))
         }
+        rv$data <- df
         df
       }else{
         print("No Txt-Filter")
+        rv$data <- df
         df
       }
   })
@@ -85,7 +89,7 @@ data<-  observeEvent(input$btUpload, {
   # Textfield - rule count
   output$ruleCount <- renderText({
     
-    txt <- paste("Anzahl Regeln:", nrow(data()))
+    txt <- paste("Anzahl Regeln:", nrow(rv$data))
     print(txt)
     txt}
   )
@@ -96,7 +100,7 @@ data<-  observeEvent(input$btUpload, {
       #data.model <<- read.csv(input$fileIn$datapath,
        #               sep = ",")
       print("Target Box start")
-      df_cnts <- data()
+      df_cnts <- rv$data
       df_cnts <- as.data.frame( sort(table(df_cnts$FAULT_TYPE),decreasing =  FALSE))
       
       TargetBox <- plot_ly(
@@ -119,9 +123,10 @@ data<-  observeEvent(input$btUpload, {
           # df <<- read.csv(input$fileIn$datapath,
                          # sep = ",")
           # model.data <-reactive(df)
-         print(sum(df$support))
-      
+          df <- rv$data
           data()
+         print(sum(df$support))
+         rv$data
         },
         error = function(e) {
           # return a safeError if a parsing error occurs

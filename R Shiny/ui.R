@@ -25,15 +25,27 @@ ui <- fluidPage(
       ),
       actionButton("btUpload", "Use selected file",icon("file-upload"), class= "btn-success"),
       
+      column(6, actionButton("do", "Show Msg")),
       
       textInput("txt_filter", "Filter by String", value = ""),
-      fluidRow(1, "moin"),
-      actionButton("do", "Show Msg"),
-      
-      
-      
-      actionButton("rv1l", "Data set 1 load"),
-      actionButton("rv2", "Data set 2"),
+      fluidRow(
+        column( 12,
+                fluidRow(
+                  column(6,actionButton("rv1s", "Data set 1 save")),
+                  column(6,actionButton("rv1l", "Data set 1 load")),
+                  )
+                )
+        ),
+      br(''),
+      fluidRow(
+        column( 12,
+                fluidRow(
+                  column(6,actionButton("rv2s", "Data set 2 save")),
+                  column(6,actionButton("rv2l", "Data set 2 load"))
+                )
+        )
+      ),
+      br(''),
       
       sliderInput( 
                   "slSupp",
