@@ -3,7 +3,7 @@ library(plotly)
 # install d3 package 
 #df <- read.csv("/Users/benjaminwuthe/Library/Mobile Documents/com~apple~CloudDocs/Masterarbeit/Joshuas stuff/Daten/SCHRITT_1_CLOSED_NON_DERIVABLE_ITEMSETS.csv")
 
-devtools::install_github("rstudio/r2d3")
+#devtools::install_github("rstudio/r2d3")
 ################################
 #                              #
 #         INIT STUFF           #
@@ -12,7 +12,7 @@ devtools::install_github("rstudio/r2d3")
 
 
 
-df <- read.csv("/Users/benjaminwuthe/Library/Mobile Documents/com~apple~CloudDocs/Masterarbeit/Joshuas stuff/Daten/SCHRITT_5_1_WEIGHTED_SELECTION.csv")
+df <- read.csv("data/SCHRITT_5_1_WEIGHTED_SELECTION.csv")
 
 # data - count, sort, and as DF
 df_cnts <- as.data.frame( sort(table(df$FAULT_TYPE),decreasing =  FALSE))
@@ -28,16 +28,60 @@ interesting_cols <- c("FAULT_TYPE","rules","support","confidence","lift",
 
 df <- df[,interesting_cols]
 
+items <- c("AGE","MODEL",	"DEALERSHIP"	,"CUSTOMER_TYPE",	"USER_CUSTOMISED",
+           "COUNTRY",	"GEO_TYPE",	"FAULT_TYPE")
+
+
 ################################
 #      INIT STUFF END          #
 ################################
 
+################################
+#      ICICLE TEST START       #
+################################
+
+
+
+
+append( c(1,2,3),c(9,8,7))
+
+library(hierarchicalSets)
+data('twitter')
+
+twitSet <- create_hierarchy(twitter)
+twitSet
+## A HierarchicalSet object
+## 
+##                  Universe size: 28459
+##                 Number of sets: 100
+## Number of independent clusters: 6
+
+plot(twitSet)
+
+################################
+#      ICICLE TEST END         #
+################################
+
+
+print(as.data.frame(twitter))
+
+
+library(hierarchicalSets)
+data('twitter')
+
+twitSet <- create_hierarchy(twitter)
+twitSet
+plot(twitSet, type = 'intersectStack', showHierarchy = TRUE)
+
+
 # drop cols from df
-names(df_sub)
 df_sub <- subset(df, select= -c(rules,support,confidence, 
                                 lift,FAULT_COUNT,#OBJECT_COUNT,
                                 FAULT_RATE#,AGGREGATION_LEVEL,SET_SIZE
                                 ))
+
+
+
 
 # tree test
 library(rpart)
@@ -51,7 +95,7 @@ treetest<-function(){
     FAULT_TYPE ~ .,
     data = df_sub, 
     method = "class", 
-    maxdepth = 6)
+    maxdepth = 1)
   
   
   prp(tree,
@@ -60,15 +104,155 @@ treetest<-function(){
   split.box.col = "lightgray",
   split.border.col = "darkgray",
   )
+  return(tree)
   # collapsibleTree(df_sub,  hierarchy = c("MODEL", "AGE", "FAULT_TYPE"), 
   #                 width = 800,
   #                 zoomable = FALSE
   #                 )
 }
-treetest()
 
+tree <- treetest()
+print(rpart.rules(tree))
+
+rpart.plot(tree)
 ################################
+# TEST TREE STRUCTURE
 
+library(treemap)
+library(data.tree)
+df$pathString <- paste("FAULTS", 
+                        df$AGE,
+                        df$FAULT_TYPE,
+                        df$COUNTRY,
+                       # sum(population$Get("COUNTRY", filterFun = isLeaf), na.rm = TRUE),
+                        #df$OBJECT_COUNT,
+                        sep = "/")
+df_node <-  as.Node(df)
+
+
+Aggregate(df_node, "OBJECT_COUNT", sum)
+
+myApply <- function(node) {
+  node$totalObjects <- 
+    sum(c(node$OBJECT_COUNT, purrr::map_dbl(node$children, myApply)), na.rm = TRUE)
+}
+myApply(df_node)
+
+df_node2<-print(df_node,'totalObjects')
+
+
+df_node$AddChild("OBJECT_COUNT")
+
+
+df_node
+
+print(df_node)
+plot(df_node, "totalObjects")
+
+data(acme)
+print(acme, "cost")
+
+df_node$aggVals<- Aggregate(df_node, "cost", sum)
+
+
+
+library(networkD3)
+acmeNetwork <- ToDataFrameNetwork(df_node2, "name")
+p<-simpleNetwork(acmeNetwork[-3], fontSize = 10)
+
+
+useRtreeList <- ToListExplicit(df_node, unname = TRUE)
+a<-radialNetwork( useRtreeList)
+
+library(plotly)
+library(crosstalk)
+library(DT)
+
+
+sd <- SharedData$new(df)
+
+a <- plot_ly(sd, x = ~support, y = ~confidence) %>% 
+  add_markers(alpha = 0.5) %>%
+  highlight("plotly_selected", dynamic = TRUE)
+
+
+options(persistent = TRUE)
+
+p <- datatable(sd)
+
+bscols(widths = c(6, 6), a, p)
+
+
+
+
+df_sub %>%
+  filter(FAULT_TYPE %in% 'BreakFluid')
+names(df)
+df_sub
+
+treemap <- plot_ly(
+  source = "treemap",
+  type = "treemap",
+  labels = prepared_data$labels,
+  ids = prepared_data$ids,
+  parents = prepared_data$parents,
+  customdata = prepared_data$customdata,
+  values = prepared_data$values,
+  text = prepared_data$colors,
+  texttemplate = texttemplate,
+  hovertemplate = hovertemplate,
+  marker = list(
+    colors = prepared_data$colors_adj,
+    showscale = TRUE,
+    colorscale = "Reds"
+  ),
+  branchvalues = "total",
+  height = 700,
+  maxdepth = -1
+)
+treemap
+
+
+##################
+dfs<-NULL
+dfs <- list(Id= "Init Data", subsets= df_cnts)
+
+dfs<-append(dfs, list(Id= "new one", subsets= df))
+
+
+
+df_names <- c('Init Dataset')
+df_subsets <- list(list(df))
+
+
+
+addSubset <- function (name, subset){
+  df_names<<-append(df_names, name)
+  df_subsets <<- append(df_subsets, list(subset))
+}
+
+getSubset <- function(name){
+  tf <- df_names ==name #where name is in subset
+  print(df_subsets[tf]) # retrun the corresponding subset
+}
+
+getSubset('newone')
+
+
+addSubset('newone', df_cnts)
+
+
+print(df_names, df_subsets)
+
+
+
+d<-NULL
+d <- objects(df[])
+as.data.frame(d)
+
+print(d)
+
+##################
 
 
 DT::datatable(df[,interesting_cols])
