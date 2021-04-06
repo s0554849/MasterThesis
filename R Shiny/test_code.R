@@ -1,5 +1,6 @@
 #plotly
 library(plotly)
+
 # install d3 package 
 #df <- read.csv("/Users/benjaminwuthe/Library/Mobile Documents/com~apple~CloudDocs/Masterarbeit/Joshuas stuff/Daten/SCHRITT_1_CLOSED_NON_DERIVABLE_ITEMSETS.csv")
 
@@ -9,8 +10,6 @@ library(plotly)
 #         INIT STUFF           #
 #                              #
 ################################
-
-
 
 df <- read.csv("data/SCHRITT_5_1_WEIGHTED_SELECTION.csv")
 
@@ -36,12 +35,121 @@ items <- c("AGE","MODEL",	"DEALERSHIP"	,"CUSTOMER_TYPE",	"USER_CUSTOMISED",
 #      INIT STUFF END          #
 ################################
 
+sankey_cols <- c("AGE","MODEL",	"DEALERSHIP"	,"CUSTOMER_TYPE")
+
+
+dats_all <- df %>%      
+  group_by_at(vars(one_of(sankey_cols)))%>%  # group them# data
+  # group_by( vars(sankey_cols)) %>%  # group them
+  summarise(Freq = FAULT_COUNT) 
+
+
+l <- length(sankey_cols)
+
+
+# now plot it
+data_allu <-alluvial( dats_all[,1:l], 
+          freq=dats_all$Freq, 
+          border= NA , 
+          col =  "Red",
+          alpha = 0.3
+)
+###############
+
+
+df_grp1 <- df %>%      
+  group_by_at(vars(one_of(sankey_cols[1:2])))%>%  # group them# data
+  # group_by( vars(sankey_cols)) %>%  # group them
+  summarise(Freq = FAULT_COUNT) 
+
+
+df_grp2 <- df %>%      
+  group_by_at(vars(one_of(sankey_cols[2:3])))%>%  # group them# data
+  # group_by( vars(sankey_cols)) %>%  # group them
+  summarise(Freq = FAULT_COUNT) 
+
+names(df_grp1) <- c("source", "target", "value")
+names(df_grp2) <- c("source", "target", "value")
+
+df_grp_full<-NULL
+df_grp_full <- as.data.frame( rbind(df_grp1, df_grp2))
+library(networkD3)
+nodes = data.frame("name" = 
+                     c("*", # Node 0
+                       "InWarranty", # Node 1
+                       ))# Node 3
+sankeyNetwork(Links = df_grp_full, Nodes = nodes,
+              Source = "source", Target = "target",
+              Value = "value", NodeID = "name",
+              fontSize= 12, nodeWidth = 30)
+
+nodes = data.frame("name" = 
+                     c("Node A", # Node 0
+                       "Node B", # Node 1
+                       "Node C", # Node 2
+                       "Node D"))# Node 3
+links = as.data.frame(matrix(c(
+  0, 1, 10, # Each row represents a link. The first number
+  0, 2, 20, # represents the node being conntected from. 
+  1, 3, 30, # the second number represents the node connected to.
+  2, 3, 40),# The third number is the value of the node
+  byrow = TRUE, ncol = 3))
+names(links) = c("source", "target", "value")
+sankeyNetwork(Links = links, Nodes = nodes,
+              Source = "source", Target = "target",
+              Value = "value", NodeID = "name",
+              fontSize= 12, nodeWidth = 30)
+
+
+
 ################################
 #      ICICLE TEST START       #
 ################################
 
 
+plot(df$FAULT_TYPE)#, type= "histogram")
 
+plot(table(df$FAULT_TYPE) )
+hist(tabele(df$FAULT_TYPE))
+
+t <- as.data.frame(table(df$FAULT_TYPE))
+t$Freq2 <- as.data.frame(table(df$FAULT_TYPE))$Freq
+
+fig <- plot_ly(t, x = ~Var1, y = ~Freq, type = 'bar', name = '1')
+fig <- fig %>% add_trace(y = ~Freq2, name = 'LA Zoo')
+fig
+
+
+df$FAULT_TYPE[1:40]
+
+f <- 'FAULT_COUNT'
+f <- 'FAULT_TYPE'
+categoricalFeatures <-
+  c(
+    "FAULT_TYPE",
+    "MODEL",
+    "AGE",
+    "DEALERSHIP",
+    "CUSTOMER_TYPE",
+    "USER_CUSTOMISED",
+    "COUNTRY",
+    "GEO_TYPE"
+  )
+
+paste("a","v",sep="")
+
+
+
+df[f]
+
+df_sub
+library(data.tree)
+data("acme")
+as.data.frame(acme)
+df_net <- ToDataFrameNetwork(acme, "cost")#
+df_net
+
+ToDataFrameNetwork(df_sub, "FAULT_RATE")
 
 append( c(1,2,3),c(9,8,7))
 
@@ -120,6 +228,7 @@ rpart.plot(tree)
 
 library(treemap)
 library(data.tree)
+
 df$pathString <- paste("FAULTS", 
                         df$AGE,
                         df$FAULT_TYPE,
@@ -134,17 +243,35 @@ Aggregate(df_node, "OBJECT_COUNT", sum)
 
 myApply <- function(node) {
   node$totalObjects <- 
-    sum(c(node$OBJECT_COUNT, purrr::map_dbl(node$children, myApply)), na.rm = TRUE)
+    sum(c(node$FAULT_COUNT, purrr::map_dbl(node$children, myApply)), na.rm = TRUE)
 }
 myApply(df_node)
 
 df_node2<-print(df_node,'totalObjects')
 
 
+
+
 df_node$AddChild("OBJECT_COUNT")
 
-
+range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 df_node
+df$FAULT_SCALE <- range01(df$FAULT_COUNT )
+  
+collapsibleTreeSummary(
+    df,  hierarchy = selectedHier, 
+    root = "Cars",
+    attribute = "FAULT_SCALE",
+    nodeSize = "FAULT_SCALE",
+    width = 800, zoomable = TRUE,
+    height = 
+    inputId = "treeUpdate"
+)
+
+
+
+
+
 
 print(df_node)
 plot(df_node, "totalObjects")
@@ -182,13 +309,13 @@ p <- datatable(sd)
 
 bscols(widths = c(6, 6), a, p)
 
+df_sub <- df
 
 
-
-df_sub %>%
+df_sub <- df_sub %>%
   filter(FAULT_TYPE %in% 'BreakFluid')
 names(df)
-df_sub
+
 
 treemap <- plot_ly(
   source = "treemap",
