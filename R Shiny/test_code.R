@@ -11,13 +11,14 @@ library(plotly)
 #                              #
 ################################
 
+df <- read.csv('SCHRITT_4_1_MINSUP_MINCONF.csv')# Initial dataset
+
 df <- read.csv("data/SCHRITT_5_1_WEIGHTED_SELECTION.csv")
 
 # data - count, sort, and as DF
 df_cnts <- as.data.frame( sort(table(df$FAULT_TYPE),decreasing =  FALSE))
 
 # names(df) # show columnnames
-
 #
 
 interesting_cols <- c("FAULT_TYPE","rules","support","confidence","lift",
@@ -55,6 +56,35 @@ data_allu <-alluvial( dats_all[,1:l],
           alpha = 0.3
 )
 ###############
+d2<-df[,c(selectedHier , "FAULT_COUNT")]
+x<- for (e in selectedHier){df[,e]}
+
+# AGGREGATING
+form = as.formula(paste(". ~", paste(selectedHier, collapse = " + ")))
+aggregate(form, data = d2,FUN = sum)
+
+aggregate(FAULT_COUNT ~ AGE, data = df , FUN = sum)
+######
+
+
+dtest <- data.frame(a = c('a','b','c','a'), b=c(2,3,2,4))
+
+dtest$perc<-sapply(dtest$b, FUN = function(x)x/sum(dtest$b))
+
+
+####
+# colorpalete mapping
+
+colorRamp()
+
+
+library(RColorBrewer)
+
+brewer.pal(n = 3, name = "RdBu")
+
+
+
+
 
 
 df_grp1 <- df %>%      
@@ -184,8 +214,8 @@ plot(twitSet, type = 'intersectStack', showHierarchy = TRUE)
 
 # drop cols from df
 df_sub <- subset(df, select= -c(rules,support,confidence, 
-                                lift,FAULT_COUNT,#OBJECT_COUNT,
-                                FAULT_RATE#,AGGREGATION_LEVEL,SET_SIZE
+                                lift,FAULT_COUNT,OBJECT_COUNT#,
+                                #FAULT_RATE#,AGGREGATION_LEVEL,SET_SIZE
                                 ))
 
 
@@ -200,10 +230,10 @@ treetest<-function(){
   print('treetest')
   
   tree <- rpart(
-    FAULT_TYPE ~ .,
+    FAULT_RATE ~ .,
     data = df_sub, 
-    method = "class", 
-    maxdepth = 1)
+    method = "anova", 
+    maxdepth = 5)
   
   
   prp(tree,
@@ -219,10 +249,21 @@ treetest<-function(){
   #                 )
 }
 
+
+
 tree <- treetest()
+tree$variable.importance
+# tree$ordered
+
 print(rpart.rules(tree))
 
-rpart.plot(tree)
+rpart.rules(tree_r)
+
+suggestionText <- paste("Next best feature by regression Tree: \n", rpart.rules(tree)[[3]][1],"\nConsider feature values:", rpart.rules(tree)[[5]][1])
+print(suggestionText)
+
+prp(tree)
+rpart.plot(tree , box.palette = "Reds")
 ################################
 # TEST TREE STRUCTURE
 
@@ -440,3 +481,23 @@ ggplot(df_cnts, aes(Var1,Freq)) + geom_col()
 
 df <- data.frame(trt = c("a", "b", "c"), outcome = c(2.3, 1.9, 3.2))
 ggplot(df_cnts, aes(trt, outcome)) +geom_col()
+
+
+
+
+
+s <-strsplit("Please create a subset to compare"," ")
+fr <- c()
+i<-1
+for (x in 1:length(s)){
+  #integer(i)
+  fr[i]<- i
+  i<-i+1
+  
+}
+library(wordcloud2)
+txt <- data.frame(word=s,
+freq=fr)
+
+wordcloud2(data = txt )
+

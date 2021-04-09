@@ -70,12 +70,15 @@ ui <- fluidPage(
                      width = NULL
                    ),
                    #hr(),
-                   fluidRow(column(
-                     6, actionButton("do", "Drop filter", icon("undo") , width = "100%")
-                   ),
+                   fluidRow(
+                   #   column(
+                   #   6, actionButton("do", "Drop filter", icon("undo") , width = "100%")
+                   # ),
                    column(
-                     6,
-                     actionButton("btSaveSubset", "Save Subset", icon("table") , width = "100%")
+                     12,
+                     actionButton("btSaveSubset", "Save Subset", icon("table") ,
+                                  class="btn btn-primary btn-sm",
+                                  width = "100%")
                    )),
                    hr(),
                    textInput("txt_filter", "Filter by String", value = ""),
@@ -103,7 +106,7 @@ ui <- fluidPage(
                      12,
                      plotOutput(
                        "TargetBox",
-                       brush = brushOpts(id = "plot1_brush"),
+                       #brush = brushOpts(id = "plot1_brush"),
                        click = "click_bar"
                      )
                    )),
@@ -113,8 +116,29 @@ ui <- fluidPage(
                  
                  mainPanel(
                    width = 9,
-                   verbatimTextOutput("ruleCount"),
+                   tags$head(tags$style(HTML("
+                            #ruleCount {
+                            background-color: #FFFAFA;
+                            }
+                            #treeSuggestion {
+                            background-color: #faf1f1;
+                            }
+                            #treeSummary {
+                            background-color: #faf1f1;
+                            }
+                            #button {
+                            background-color: red;
+                            }
+                             #container-fluid {
+                            background-color: #faf1f1;
+                            }
+                            
+                            
+                            
+                            "))),
                    
+                   
+                   verbatimTextOutput("ruleCount"),
                    
                    # tabset for different vizs
                    wellPanel(
@@ -135,10 +159,16 @@ ui <- fluidPage(
                                         input_id = "bucketLHS"
                                       )
                                     
-                                      
                                     ),
                                     verbatimTextOutput("treeSuggestion"),
-                                    sliderInput("treeDepth", min = 1, max = 4, value = 1, label = "Tree depth"),
+                                  
+                                    fluidRow(
+                                    column(4,
+                                           numericInput("treeDepth", min = 1, max = 4, value = 1, label = "Tree depth")
+                                           )
+                                    ),
+                                    
+                                    
                                     plotOutput("supportTree")
                                     
                                   ),
@@ -155,18 +185,18 @@ ui <- fluidPage(
                                 )),
                        
                        ####### END TAB PANEL #######
-                       tabPanel(title = "DecesionTree",
+                       tabPanel(title = "DecesionTrees",
                                 fluidRow(
                                   column(
                                     6,
-                                    style = "background-color:#8ad3ff;",
+                                    style = "background-color:#ff7b7b;",
                                     h2("Regression Tree", align = "center"),
                                     plotOutput("decisionTreeRegression"),
                                     br()
                                   ),
                                   column(
                                     6,
-                                    style = "background-color:#b6fffd;",
+                                    style = "background-color:#ff5252;",
                                     h2("Classification Tree", align = "center"),
                                     plotOutput("decisionTreeClass"),
                                     br()
@@ -180,11 +210,14 @@ ui <- fluidPage(
                          title = "Data table",
                          DT::dataTableOutput("fileTable2"),
                          DT::dataTableOutput("tableSelected"),
+                         hr(),
                          actionButton(
                            'btFilterTable',
                            label = "Filter by selected rules",
                            icon = icon("exchange"),
-                           class = "btn-success"
+                           class="btn btn-primary btn-lg",
+                           width = "100%"
+                           # class = "btn-success"
                          )
                        ),
                        
@@ -193,7 +226,7 @@ ui <- fluidPage(
                        tabPanel(title = "Plots",
                                 h2("Overview and compare subsets"),
                                 fluidRow(column(
-                                  6,
+                                  5,
                                   selectizeInput(
                                     'dropdown_plots1',
                                     'Subsets',
@@ -203,7 +236,7 @@ ui <- fluidPage(
                                   )
                                 ),
                                 column(
-                                  6,
+                                  5,
                                   selectizeInput(
                                     'dropdown_plots2',
                                     'Subsets',
@@ -211,9 +244,21 @@ ui <- fluidPage(
                                     options = NULL,
                                     width = NULL
                                   )
-                                )),
+                                ),
+                                column(2,
+                                       selectizeInput(
+                                         'dropdown_absRel',
+                                         'Scale',
+                                         c('relative', 'absolute'),
+                                         options = NULL,
+                                       )
+                                       
+                                       )
+                                ),
                                 # plots
                                 
+                                verbatimTextOutput("plots_info"),
+                                hr(),
                                 plotlyOutput("plots_1"),
                                 
                                 hr(),
