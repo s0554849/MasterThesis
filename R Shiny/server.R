@@ -8,7 +8,7 @@ library(rpart.plot)
 library(crosstalk) # double plot once with bscols
 
 library(alluvial) # sankey plots
-
+library(RColorBrewer)
 
 # Init global variables and helper functions
 
@@ -49,6 +49,8 @@ categoricalFeatures <-
     "COUNTRY",
     "GEO_TYPE"
   )
+treUpd <- ""
+color_light <- '#FFFAFA'
 
 xyzArr <- reactiveValues()
 
@@ -71,12 +73,6 @@ df_names <- c('Init Dataset')
 df_subsets <- list(list(df))
 
 
-getSubset <- function(name) {
-  tf <- df_names == name #where name is in subset
-  df_subsets[tf] # retrun the corresponding subset
-}
-
-
 treeSummaryText <- ""
 
 server <- function(input, output, session) {
@@ -85,8 +81,20 @@ server <- function(input, output, session) {
   rv$data <- df
   compare_data <- reactiveValues()
   
+  
+  getSubset <- function(name) {
+    if (name == 'Current Data'){
+      print(c('current data required\n', rv$data))
+      
+      rv$data
+    }else{
+      tf <- df_names == name #where name is in subset
+      df_subsets[tf] # retrun the corresponding subset
+    }
+  }
+  
   addSubset <- function (name, subset) {
-    print(paste("Adding subset now", name))
+    print(paste("Adding subset", name))
     df_names <<- append(df_names, name)
     df_subsets <<- append(df_subsets, list(subset))
     
@@ -120,6 +128,7 @@ server <- function(input, output, session) {
     )
   }
   
+  
   observeEvent(input$do, {
     rv$data <- df
     df_subsets[2] %>%
@@ -134,6 +143,18 @@ server <- function(input, output, session) {
   observeEvent(input$btSaveSubset, {
     showModal(dataModal(failed = TRUE))
   })
+  
+
+  
+  observeEvent(input$btUseTreeSelection, {
+    
+    d <- rv$data
+    print(d$AGE)
+    d <- filterDfByTreeselectionfunction(d)
+    rv$data <-d
+    
+  })
+  
   
   
   observeEvent(input$bt_add_subgroup, {
@@ -153,7 +174,7 @@ server <- function(input, output, session) {
     
   })
 
-  # Button Upload
+  # UPLOAD FILE WITH RULES
   data <-  observeEvent(input$fileIn, {
     df <<-
       read.csv(input$fileIn$datapath, sep = ",")[, interesting_cols]
@@ -229,7 +250,21 @@ server <- function(input, output, session) {
   })
   
   
-  
+  filterDfByTreeselectionfunction <- function(d){
+    # Prepare Data - 
+    print(c("treupd val",str(treUpd)))
+    if (!is.null(treUpd)){
+      for (el in names(treUpd)) {
+        filter_col <- el
+        filter_val <- 
+          print(paste("For col", el, "filter by", treUpd[el]))
+        
+        d<-d[d[,el]==treUpd[el],]
+        return(d)
+      } 
+      
+    }
+  }
   
   getZAxis <- function(x, y) {
     # returns Z axis (support, conf, lift) - depends on x and y
@@ -297,7 +332,10 @@ server <- function(input, output, session) {
           '\nLift: ',
           lift
         )
-      ) %>%
+      ) %>% 
+      layout(legend = list(orientation = 'h'))%>%
+      layout(plot_bgcolor= "#fffbfb",
+    paper_bgcolor = color_light) %>%
       highlight("plotly_selected", dynamic = TRUE)
     
     layout(
@@ -394,7 +432,7 @@ server <- function(input, output, session) {
     form = as.formula(paste(". ~", paste(selectedHier, collapse = " + ")))
     d <- aggregate(form, data = d,FUN = sum)
     
-    d$perc<-sapply(d$FAULT_COUNT, FUN = function(x)x/sum(d$FAULT_COUNT))
+    # d$perc<-sapply(d$FAULT_COUNT, FUN = function(x)x/sum(d$FAULT_COUNT))
     
     # print(d)
     collapsibleTreeSummary(
@@ -422,17 +460,17 @@ server <- function(input, output, session) {
   
   # Observe Tree and handle several plots on page and train tree for suggestion
   # Updated Uputpus: Information, suggestion plot with Tree and sankey chart
+
+  
   observeEvent(
     {input$treeUpdate 
       input$treeDepth}, {
     
-    treUpd <-input$treeUpdate
+    treUpd <<-input$treeUpdate
     
     # INFO ABOUT SELECTION IN TREE
     output$treeSummary <- renderPrint(
-      if (is.null(treUpd)){
-        str("Show tree selection")
-      }else{
+      if (! is.null(treUpd)){
         str(treUpd)
       }
       
@@ -440,29 +478,88 @@ server <- function(input, output, session) {
   
     d <-rv$data
     
-    # Prepare Data
+    # d <- filterDfByTreeselectionfunction(d)
+    # 
+    # # Prepare Data - 
     for (el in names(treUpd)) {
       filter_col <- el
-      filter_val <- 
+      filter_val <-
         print(paste("For col", el, "filter by", treUpd[el]))
-      
+
       d<-d[d[,el]==treUpd[el],]
     }
     
-    # Train tree with filtered Data and plot 
-    d_sub <- subset(d, select= -c(rules,support,confidence,
-                                  lift,FAULT_COUNT, OBJECT_COUNT
+    
+  
+    
+    # Prepare datafiltered Data and plot 
+    df_sub <- subset(d, select= -c(rules,support,confidence,
+                                  lift,#FAULT_COUNT, OBJECT_COUNT
                                   #FAULT_RATE#
-                                  ,AGGREGATION_LEVEL,SET_SIZE
-    ))
+                                  #,AGGREGATION_LEVEL,
+                                  SET_SIZE
+                                  ))
+    
+    
+    
+    ########################################################
+
+    # CREATE a HEATMAP - representing two features and the weighted faultrate
+    
+    # find features for heatmap
+    heat_feat <- selectedHier[selectedHier!=names(treUpd)] # drop selected features from collapsed tree from the hierachy 
+           
+    #PLOT HEATMAP ONLY IF TRERE ARE 2 features
+        if (length(heat_feat)>1){
+          print(c('HEAT FEATURES', heat_feat))
+          # create a formula to aggregate. use faultcount and objectcount to compute the rel. faultrate
+          form = as.formula(paste("cbind(FAULT_COUNT, OBJECT_COUNT) ~", paste(c(heat_feat, "AGGREGATION_LEVEL"), collapse = " + ")))
+          
+          t <- aggregate(form, data = df_sub,FUN = sum) # create aggregation table
+          t$f_rate <- t$FAULT_COUNT*100/t$OBJECT_COUNT # compute rel. faultrate
+          
+          # PLOT NUMBER OF AGGREGATION LEVELS
+          x <-t$AGGREGATION_LEVEL %>%
+            table() %>%
+            as.data.frame()
+          
+          f <- plot_ly (x= x$., y=x$Freq, type = 'bar' , marker = list(color = '#ff7560')) %>%
+            layout(plot_bgcolor= color_light,
+                   paper_bgcolor = color_light, title= "Aggregation levels", 
+                   xaxis=list(title="Aggregation levels", showgrid = F),
+                   yaxis=list(title="# of rules", showgrid = F))
+          
+          output$aggregationLevelsBar <- renderPlotly({f}) 
+          
+          
+          # filter aggregated data. Use the desired features which are agg level 5 
+          theat <- subset(t,  select = c(heat_feat, "f_rate"), AGGREGATION_LEVEL == length(names(treUpd)),)
+          
+          # CREATE HEATMAP. Features vlues are X and Y axis, the value is the new fault rate
+          heatmp <- plot_ly(x= theat[,1], y=theat[,2], z = theat$f_rate,
+                            type = "heatmap", colors = 'Reds' ) %>%
+            layout(plot_bgcolor= color_light,#'#c0b0b0',#ffffff',
+                   paper_bgcolor = color_light,# '#FFeaea',
+                   title= "Aggregated relative fault rate",
+                   xaxis=list(title = "", showgrid = F),
+                   yaxis=list(title="", showgrid = F))# %>%
+          
+          output$aggregatedFaultsHeat <- renderPlotly({heatmp})
+      
+      
+        }
+    # Drop columns which are not useful for the treex
+    df_sub <- select(df_sub, -c(FAULT_COUNT, OBJECT_COUNT, AGGREGATION_LEVEL))
+    
+    # TRAIN AND PLOT REGRESSIONTREE 
     tree_r<- rpart(
       FAULT_RATE ~ .,
       #FAULT_TYPE ~ .,
-      data = d_sub,
+      data = df_sub,
       method = "anova",# "class",
       maxdepth = input$treeDepth)
     
-
+    
     output$supportTree <- renderPlot({
       rpart.plot(tree_r , box.palette = "Reds", snip = TRUE, )
       # prp(tree_r,
@@ -476,15 +573,22 @@ server <- function(input, output, session) {
       # )
     })
     
-  # INFOTEXT NEXT BEST FEATURE
+    # INFOTEXT NEXT BEST FEATURE
     suggestionText <- paste("Next best feature by regression Tree: \n", rpart.rules(tree_r)[[3]][1],"\nConsider feature values:", rpart.rules(tree_r)[[5]][1])
     output$treeSuggestion <- renderText(suggestionText)
     
     
+            
+   
+    #########################################################
+    
+    
+    
+    # PLOT SANKEY
     output$sankeyPlot <- renderPlot({
       sankey_cols <- input$bucketLHS
       # sankey_cols<-selectedHier
-      dats_all <- df %>%      
+      dats_all <- d %>%      
         group_by_at(vars(one_of(sankey_cols)))%>%  # group them# 
         # group_by( vars(sankey_cols)) %>%  # group them
         summarise(Freq = FAULT_COUNT) 
@@ -493,28 +597,35 @@ server <- function(input, output, session) {
       l <- length(sankey_cols)
       
       # color managing
-      color_feature <- selectedHier[1] # which featur should be colored
+      color_feature <- selectedHier[1] # which feature should be colored
       color_classes <- names(table(dats_all[,color_feature])) # which unique values has a feature
       ncolors <- length(color_classes) # how many fetures 
+      color_plate <- c('blue', 'red')
       color_plate <- brewer.pal(n = ncolors, name = "Set1") # create color palete with n colors
 
       dats_all$colorClass <- sapply(dats_all[color_feature] ,FUN= function(x) color_plate[match(x, color_classes)])
-
       
+      #Replace * Values with color white
+      fkn <- function(a,b){
+        ifelse(a == "*", "white", b)
+      }
+      
+      if(input$dropdownHideStar =='yes'){
+        dats_all$colorClass <- mapply(fkn, dats_all[color_feature], dats_all['colorClass'])
+      }
+      
+
+    
       # PLOT SANKEY
       alluvial( dats_all[,1:l],
                 freq=dats_all$Freq,
                 border= NA ,
                 col = dats_all$colorClass[,1],#color_plate[match(dats_all[color_feature], color_classes)],sep=""),#ifelse( dats_all$AGE == "*", "Red", "purple"),
                 alpha = 0.7
-                
+
       ) #+ geom_alluvium(aes(fill = FAULT_TYPE), width = 1/12)
       
     })
-    
-    
-    
-  
     
   })
   
@@ -546,6 +657,8 @@ server <- function(input, output, session) {
                                     #FAULT_RATE#
                                     ,AGGREGATION_LEVEL,SET_SIZE
     ))
+    
+#    print(df_sub)
     tree_r<- rpart(
       FAULT_RATE ~ .,
       #FAULT_TYPE ~ .,
@@ -559,6 +672,7 @@ server <- function(input, output, session) {
             box.palette = "Reds",
             extra=101, #number and percentage of objects
             # box.palette = "auto",
+          compress = TRUE,
             split.box.col = "lightgray",
             split.border.col = "darkgray",
     )
@@ -682,12 +796,21 @@ server <- function(input, output, session) {
         x = ~ Var1,
         y = ~ Freq,
         type = 'bar',
-        name = input$dropdown_plots1
+        name = input$dropdown_plots1, 
+        color = "red"
       )
     fig <- fig %>% add_trace(y = ~ Freq2, 
-                             name = input$dropdown_plots2
-                             )
-    fig <- fig %>% layout(xaxis = list(title = feature))
+                             name = input$dropdown_plots2,
+                             color ='black'
+                             )%>%
+      layout(plot_bgcolor= color_light,
+                                     paper_bgcolor = color_light)
+                               
+    fig <- fig %>% layout(xaxis = list(title = feature, showgrid = F),
+                          yaxis=list( showgrid = F)
+    )
+    
+    
     fig
     
   }
@@ -701,6 +824,7 @@ server <- function(input, output, session) {
      compare_data$d1 <- as.data.frame(getSubset(name =  input$dropdown_plots1))
      compare_data$d2 <- as.data.frame(getSubset(name =  input$dropdown_plots2))
     
+     print(compare_data$d2)
      
       # for (i in 1:8) {
       #   plt_name <- paste("plots_",i, sep = "") # to know which plot to use

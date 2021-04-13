@@ -12,7 +12,7 @@ library(plotly)
 ################################
 
 df <- read.csv('SCHRITT_4_1_MINSUP_MINCONF.csv')# Initial dataset
-
+df <-read.csv('data/SCHRITT_2_3_CONDENSED_ITEMSET.csv')
 df <- read.csv("data/SCHRITT_5_1_WEIGHTED_SELECTION.csv")
 
 # data - count, sort, and as DF
@@ -20,6 +20,7 @@ df_cnts <- as.data.frame( sort(table(df$FAULT_TYPE),decreasing =  FALSE))
 
 # names(df) # show columnnames
 #
+
 
 interesting_cols <- c("FAULT_TYPE","rules","support","confidence","lift",
                       "FAULT_COUNT","MODEL","AGE","DEALERSHIP","CUSTOMER_TYPE",
@@ -30,6 +31,7 @@ df <- df[,interesting_cols]
 
 items <- c("AGE","MODEL",	"DEALERSHIP"	,"CUSTOMER_TYPE",	"USER_CUSTOMISED",
            "COUNTRY",	"GEO_TYPE",	"FAULT_TYPE")
+df<-df[,items]
 
 
 ################################
@@ -60,8 +62,94 @@ d2<-df[,c(selectedHier , "FAULT_COUNT")]
 x<- for (e in selectedHier){df[,e]}
 
 # AGGREGATING
-form = as.formula(paste(". ~", paste(selectedHier, collapse = " + ")))
-aggregate(form, data = d2,FUN = sum)
+
+library(plotly)
+
+
+# CREATE a HEATMAP - representing two features and the weighted faultrate
+
+# find features for heatmap
+  selectedHier <- c("MODEL", "COUNTRY", "AGE") # given hier
+  dr <-c("COUNTRY") # selected in collapseble tree
+heat_feat <- selectedHier[selectedHier!=dr] # drop selected features from collapsed tree from the hierachy 
+
+# create a formula to aggregate. use faultcount and objectcount to compute the rel. faultrate
+form = as.formula(paste("cbind(FAULT_COUNT, OBJECT_COUNT) ~", paste(c(heat_feat, "AGGREGATION_LEVEL"), collapse = " + ")))
+
+t <- aggregate(form, data = df,FUN = sum) # create aggregation
+t$f_rate <- t$FAULT_COUNT*100/t$OBJECT_COUNT # compute rel. faultrate
+
+# PLOT NUMBER OF AGGREGATION LEVELS
+x <-t$AGGREGATION_LEVEL %>%
+  table() %>%
+  as.data.frame()
+
+f <- plot_ly (x= x$., y=x$Freq, type = 'bar', marker = list(color = '#ff7560')) %>%
+  layout(plot_bgcolor='#FFeaea', 
+         paper_bgcolor = '#FFF5F5', title= "Aggregation levels", 
+         xaxis=list(title="Aggregation levels", showgrid = F),
+        yaxis=list(title="# of rules", showgrid = F))
+f
+
+# filter aggregated data. Use the desired features which are agg level 5 
+theat <- subset(t, AGGREGATION_LEVEL >5, select = c(heat_feat, "f_rate"))
+theat
+# CREATE HEATMAP. Features vlues are X and Y axis, the value is the new fault rate
+heatmp <- plot_ly(x= theat[,1], y=theat[,2], z = theat$f_rate, 
+        type = "heatmap", colors = 'Reds' ) %>% 
+layout(plot_bgcolor='#c0b0b0',#ffffff', 
+       paper_bgcolor = '#FFeaea',
+       title= "Aggregated relative fault rate", 
+       xaxis=list(title = "", showgrid = F),
+       yaxis=list(title="", showgrid = F))# %>%
+
+heatmp
+  
+
+
+tdf <- data.frame(MODEL)
+theat
+data <- as.matrix(t_heat[c('MODEL',    'COUNTRY','f_rate')])
+m <- matrix(t_heat$f_rate, nrow =  length(unique(t_heat$MODEL)), ncol =  length(unique(t_heat$COUNTRY)))
+
+temp<-NULL
+theat <- data.frame(rownames = unique(theat$MODEL), names= unique(t_heat$COUNTRY))
+str()
+
+rownames(t_heat) <- t_heat$
+data
+data("mtcars")
+t(t_heat)
+tmp<-theat
+
+
+factor(theat$MODEL)
+
+tmp<-theat
+
+
+# 
+# rownames(tmp) <- theat$MODEL
+# str(tmp)
+# 
+# rownames(tmp)<-theat[c('MODEL',    'COUNTRY')]
+# tmp <- as.data.frame(t(theat[,-1]))
+# colnames(tmp) <- theat["COUNTR"]
+# tmp<-as.matrix(tmp)
+# 
+# plot_ly(data= tmp[,1:2] , z= tmp$f_rate, type = "heatmap")
+
+
+
+
+DF <- data.frame(a = theat$MODEL, b = theat$COUNTRY,
+                 c = theat$f_rate,
+                 stringsAsFactors = TRUE)
+data.matrix(DF[1:2])
+data.matrix(DF)
+
+table(,t$AGGREGATION_LEVEL)
+
 
 aggregate(FAULT_COUNT ~ AGE, data = df , FUN = sum)
 ######
@@ -73,17 +161,9 @@ dtest$perc<-sapply(dtest$b, FUN = function(x)x/sum(dtest$b))
 
 
 ####
-# colorpalete mapping
 
-colorRamp()
-
-
-library(RColorBrewer)
-
-brewer.pal(n = 3, name = "RdBu")
-
-
-
+library(sunburstR)
+sunburst(df[c('AGE', 'MODEL')])
 
 
 
@@ -500,4 +580,46 @@ txt <- data.frame(word=s,
 freq=fr)
 
 wordcloud2(data = txt )
+##############
+# another sankey
+
+# devtools::install_github("fbreitwieser/hiervis")
+library(hiervis)
+library(data.tree)
+
+d_hier <- ToDataFrameNetwork(df)
+
+
+
+str(df)
+
+
+treemap::itreemap(df_cnts)
+hiervis(df, "sankey")
+
+print(Titanic)
+
+data("Titanic")
+df[c('AGE', 'MODEL', 'COUNTRY')]
+
+
+str(Titanic)
+
+
+# AGGREGATING AND COMPUTE THE AVG FAULTRATE
+
+head(df)
+
+
+t <- aggregate(cbind(FAULT_COUNT, OBJECT_COUNT) ~ AGE, df, FUN= sum )
+
+t <- aggregate(cbind(FAULT_COUNT, OBJECT_COUNT) ~ AGE, df, FUN= sum )
+
+t$fault_rate <- t$FAULT_COUNT/t$OBJECT_COUNT * 100
+t
+
+
+aggregate(df, by = cbind(AGE) , FUN = sum) 
+            #, )
+formula = cbind(FAULT_COUNT, OBJECT_COUNT) ~  AGE
 

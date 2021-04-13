@@ -10,11 +10,11 @@ library(collapsibleTree)
 items <-
   c(
     "AGE",
+    "COUNTRY",
     "MODEL",
     "DEALERSHIP"	,
     "CUSTOMER_TYPE",
     "USER_CUSTOMISED",
-    "COUNTRY",
     "GEO_TYPE",
     "FAULT_TYPE"
   )
@@ -23,13 +23,19 @@ supconflif <- c('support', 'confidence', 'lift')
 style_light <- "background-color: #FFFAFA;"
 style_dark <-"#faf1f1"
 
+initPlotsChoice <- c('Initial Data')
+
+
+
+
+
 ui <- fluidPage(
- 
+  
   # theme = bs_theme(version = 4, bootswatch = "sketchy", bg = "Red",fg = "Black" ),
   theme = shinytheme("united"),
- # theme = "simplex.min.css",
- 
- setBackgroundColor(color =style_dark),
+  # theme = "simplex.min.css",
+  
+  setBackgroundColor(color =style_dark),
   windowTitle = "Subgroup discovery",
   
   #icon("cog", lib = "glyphicon"),
@@ -37,7 +43,7 @@ ui <- fluidPage(
   
   
   tags$head(tags$script(src = "message-handler.js")),
- # ff6644
+  # ff6644
   # Sidebar for user inputs
   navbarPage("Subgroup explorer",
              
@@ -71,15 +77,15 @@ ui <- fluidPage(
                    ),
                    #hr(),
                    fluidRow(
-                   #   column(
-                   #   6, actionButton("do", "Drop filter", icon("undo") , width = "100%")
-                   # ),
-                   column(
-                     12,
-                     actionButton("btSaveSubset", "Save Subset", icon("table") ,
-                                  class="btn btn-primary btn-sm",
-                                  width = "100%")
-                   )),
+                     #   column(
+                     #   6, actionButton("do", "Drop filter", icon("undo") , width = "100%")
+                     # ),
+                     column(
+                       12,
+                       actionButton("btSaveSubset", "Save Subset", icon("table") ,
+                                    class="btn btn-primary btn-sm",
+                                    width = "100%")
+                     )),
                    hr(),
                    textInput("txt_filter", "Filter by String", value = ""),
                    
@@ -145,44 +151,70 @@ ui <- fluidPage(
                      style = style_light,
                      tabsetPanel(
                        tabPanel(title = "Tree",
+                                br(),
                                 fluidRow(
                                   column(
-                                    4,
+                                    3,
                                     fluidRow(verbatimTextOutput("treeSummary")),
+                                    actionButton(inputId = 'btUseTreeSelection',
+                                                label = "Filter by tree path",
+                                                class="btn btn-primary btn-sm",
+                                                width = "100%",
+                                                icon ("cut")
+                                                ),
                                     bucket_list(
                                       header = "Use Drag-n-Drop to build the hierarchy",
                                       add_rank_list(text = "Drag from here",
-                                                    labels = tail(items, 6)),
+                                                    labels = tail(items, 5)),
                                       add_rank_list(
                                         text = "to hierarchy",
-                                        labels = items[1:2],
+                                        labels = items[1:3],
                                         input_id = "bucketLHS"
                                       )
-                                    
+                                      
                                     ),
                                     verbatimTextOutput("treeSuggestion"),
-                                  
+                                    
                                     fluidRow(
-                                    column(4,
-                                           numericInput("treeDepth", min = 1, max = 4, value = 1, label = "Tree depth")
-                                           )
+                                      column(4,
+                                             numericInput("treeDepth", min = 1, max = 4, value = 1, label = "Tree depth")
+                                      ),
+                                      column(4,
+                                             selectizeInput(
+                                               'dropdownHideStar',
+                                               'Hide * in Sankey',
+                                               c('yes', 'no'),
+                                               options = NULL,
+                                               width = NULL
+                                             )
+                                      ),
                                     ),
                                     
-                                    
                                     plotOutput("supportTree")
-                                    
                                   ),
+                                    
+                                    
+                                    
+                                  # ),
                                   column(
-                                    8,
+                                    5,
                                     h4("Dynamic Tree by Fault count", align = "center"),
                                     collapsibleTreeOutput("collapsTree"),
-                                    hr(),
-                                    h4("Sankey Plot by Fault count", align = "center"),
+                                    # hr(),
+                                    # h4("Sankey Plot by Fault count", align = "center"),
                                     
                                     plotOutput("sankeyPlot")
                                     
+                                  ),
+                                  column(3,
+                                         plotlyOutput("aggregationLevelsBar", height = "150px"),
+                                         hr(),
+                                         plotlyOutput("aggregatedFaultsHeat")
+                                         )
                                   )
-                                )),
+                                
+                                
+                                ),
                        
                        ####### END TAB PANEL #######
                        tabPanel(title = "DecesionTrees",
@@ -253,7 +285,7 @@ ui <- fluidPage(
                                          options = NULL,
                                        )
                                        
-                                       )
+                                )
                                 ),
                                 # plots
                                 
@@ -265,7 +297,7 @@ ui <- fluidPage(
                                 fluidRow(
                                   column(6,
                                          plotlyOutput("plots_2")
-                                         ),
+                                  ),
                                   column(6,
                                          plotlyOutput("plots_3")
                                   )
@@ -290,9 +322,9 @@ ui <- fluidPage(
                                 ),
                                 
                                 plotlyOutput("plots_8"),
-                         hr()
-                         
-                         
+                                hr()
+                                
+                                
                        )
                        
                        ####### END TAB PANEL #######
@@ -321,7 +353,9 @@ ui <- fluidPage(
                         hr(),
                         hr()
                       ))
-                    ) # END OF TABPANEL
+             ) # END OF TABPANEL
              
-      ) # END OF NAV BAR
-  ) # END OF UI
+  ) # END OF NAV BAR
+  
+) # END OF UI
+
