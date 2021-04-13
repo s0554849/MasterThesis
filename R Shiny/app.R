@@ -6,6 +6,7 @@
 #    http://shiny.rstudio.com/
 #
 
+
 # To Deploy on Shiny.io 
 #install.packages('rsconnect')
 # library(rsconnect)
@@ -18,6 +19,5 @@ library(shiny)
 # Define UI and Server for application in seperate files 
 source('ui.R', local = TRUE)
 source(server.R)
-
 # Run the application 
 shinyApp(ui = ui, server = server)

@@ -204,7 +204,7 @@ ui <- fluidPage(
                                     collapsibleTreeOutput("collapsTree"),
                                              ),
                                       column(3,
-                                         plotlyOutput("aggregationLevelsBar", height = "150px"),
+                                         plotlyOutput("aggregationLevelsBar"),
                                              )
                                       
                                     ),

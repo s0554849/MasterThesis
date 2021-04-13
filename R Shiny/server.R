@@ -12,6 +12,8 @@ library(RColorBrewer)
 
 # Init global variables and helper functions
 
+options(shiny.maxRequestSize=100*1024^2)
+
 interesting_cols <-
   c(
     "FAULT_TYPE",
@@ -80,6 +82,8 @@ server <- function(input, output, session) {
   rv <- reactiveValues()
   rv$data <- df
   compare_data <- reactiveValues()
+  selectedHier <- reactiveValues()
+  
   
   
   getSubset <- function(name) {
@@ -468,6 +472,7 @@ server <- function(input, output, session) {
     
     treUpd <<-input$treeUpdate
     
+    
     # INFO ABOUT SELECTION IN TREE
     output$treeSummary <- renderPrint(
       if (! is.null(treUpd)){
@@ -477,9 +482,6 @@ server <- function(input, output, session) {
       )
   
     d <-rv$data
-    
-    # d <- filterDfByTreeselectionfunction(d)
-    # 
     # # Prepare Data - 
     for (el in names(treUpd)) {
       filter_col <- el
@@ -489,10 +491,9 @@ server <- function(input, output, session) {
       d<-d[d[,el]==treUpd[el],]
     }
     
+
     
-  
-    
-    # Prepare datafiltered Data and plot 
+    # Prepare data, filtered Data and plot 
     df_sub <- subset(d, select= -c(rules,support,confidence,
                                   lift,#FAULT_COUNT, OBJECT_COUNT
                                   #FAULT_RATE#
@@ -507,13 +508,19 @@ server <- function(input, output, session) {
     # CREATE a HEATMAP - representing two features and the weighted faultrate
     
     # find features for heatmap
-    heat_feat <- selectedHier[selectedHier!=names(treUpd)] # drop selected features from collapsed tree from the hierachy 
-    print(c("HEAT COLS :", heat_feat))
+    a <-c('a','b','c','d','e')
+    b <-c('c','e')
+    
+    a[!a %in% b]
+    
+        
+    heat_feat <- selectedHier[!selectedHier %in% names(treUpd)] # drop selected features from collapsed tree from the hierachy 
+  
     #PLOT HEATMAP ONLY IF TRERE ARE 2 features
         if (length(heat_feat)<2){
           heat_feat <- selectedHier[1:3]
         }
-          print(c('HEAT FEATURES', heat_feat))
+       
           # create a formula to aggregate. use faultcount and objectcount to compute the rel. faultrate
           form = as.formula(paste("cbind(FAULT_COUNT, OBJECT_COUNT) ~", paste(c(heat_feat, "AGGREGATION_LEVEL"), collapse = " + ")))
           
@@ -603,7 +610,10 @@ server <- function(input, output, session) {
       color_classes <- names(table(dats_all[,color_feature])) # which unique values has a feature
       ncolors <- length(color_classes) # how many fetures 
       color_plate <- c('blue', 'red')
-      color_plate <- brewer.pal(n = ncolors, name = "Set1") # create color palete with n colors
+      
+      if (ncolors >2){
+        color_plate <- brewer.pal(n = ncolors, name = "YlOrRd") # create color palete with n colors
+      }
 
       dats_all$colorClass <- sapply(dats_all[color_feature] ,FUN= function(x) color_plate[match(x, color_classes)])
       
@@ -790,8 +800,8 @@ server <- function(input, output, session) {
     # t$Freq2 <- asRelativeValues( as.data.frame(table(d2[feature]))$Freq)
     
     
-    t1 <- as.data.frame(table(df$FAULT_TYPE))
-    t2 <- as.data.frame(table(df2$FAULT_TYPE))
+    t1 <- as.data.frame(table(df[feature]))
+    t2 <- as.data.frame(table(df2[feature]))
     tj <- merge(t1, t2, by = "Var1", all = T)
     tj[is.na(tj)] <- 0
     
