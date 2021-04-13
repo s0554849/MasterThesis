@@ -53,7 +53,7 @@ ui <- fluidPage(
                sidebarLayout(
                  sidebarPanel(
                    style = style_light,
-                   width = 3,
+                   width = 2,
                    h2("Inputs"),
                    
                    fileInput(
@@ -121,7 +121,7 @@ ui <- fluidPage(
                  # MainPanel for viz
                  
                  mainPanel(
-                   width = 9,
+                   width = 10,
                    tags$head(tags$style(HTML("
                             #ruleCount {
                             background-color: #FFFAFA;
@@ -197,20 +197,36 @@ ui <- fluidPage(
                                     
                                   # ),
                                   column(
-                                    5,
+                                    9,
+                                    fluidRow(
+                                      column(9,
                                     h4("Dynamic Tree by Fault count", align = "center"),
                                     collapsibleTreeOutput("collapsTree"),
+                                             ),
+                                      column(3,
+                                         plotlyOutput("aggregationLevelsBar", height = "150px"),
+                                             )
+                                      
+                                    ),
+                                    fluidRow(
+                                      column(6,
+                                    plotOutput("sankeyPlot")
+                                             
+                                             ),
+                                      column(6,
+                                         plotlyOutput("aggregatedFaultsHeat")
+                                        
+                                      )
+                                      
+                                      
+                                    )
                                     # hr(),
                                     # h4("Sankey Plot by Fault count", align = "center"),
                                     
-                                    plotOutput("sankeyPlot")
                                     
                                   ),
-                                  column(3,
-                                         plotlyOutput("aggregationLevelsBar", height = "150px"),
-                                         hr(),
-                                         plotlyOutput("aggregatedFaultsHeat")
-                                         )
+                                
+                                  
                                   )
                                 
                                 

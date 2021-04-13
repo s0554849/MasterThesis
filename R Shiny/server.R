@@ -508,9 +508,11 @@ server <- function(input, output, session) {
     
     # find features for heatmap
     heat_feat <- selectedHier[selectedHier!=names(treUpd)] # drop selected features from collapsed tree from the hierachy 
-           
+    print(c("HEAT COLS :", heat_feat))
     #PLOT HEATMAP ONLY IF TRERE ARE 2 features
-        if (length(heat_feat)>1){
+        if (length(heat_feat)<2){
+          heat_feat <- selectedHier[1:3]
+        }
           print(c('HEAT FEATURES', heat_feat))
           # create a formula to aggregate. use faultcount and objectcount to compute the rel. faultrate
           form = as.formula(paste("cbind(FAULT_COUNT, OBJECT_COUNT) ~", paste(c(heat_feat, "AGGREGATION_LEVEL"), collapse = " + ")))
@@ -547,7 +549,7 @@ server <- function(input, output, session) {
           output$aggregatedFaultsHeat <- renderPlotly({heatmp})
       
       
-        }
+        # }
     # Drop columns which are not useful for the treex
     df_sub <- select(df_sub, -c(FAULT_COUNT, OBJECT_COUNT, AGGREGATION_LEVEL))
     
@@ -770,46 +772,61 @@ server <- function(input, output, session) {
     # 
   
     print("Plot Feature:")
-    print(compare_data$d1)
+    # print(compare_data$d1)
     d1<-compare_data$d1
     d2<-compare_data$d2
     
+    print(c("Number of FAULTTYPE D1:",unique(d1$FAULT_TYPE)))
+    print(c("Number of FAULTTYPE D2:",unique(d2$FAULT_TYPE)))
     
     # t$Freq <- as.data.frame( table(d1[feature]))
     # t$Freq2 <- table(d2[feature])$Freq
-    t <- as.data.frame(table(d1[feature]))
-    t$Freq2 <- as.data.frame(table(d2[feature]))$Freq
+    
+    
+    # t <- as.data.frame(table(d1[feature]))
+    # t$Freq2 <- as.data.frame(table(d2[feature]))$Freq
     
     # t$Freq <- as.data.frame(asRelativeValues( table(d1[feature])))[,1]
     # t$Freq2 <- asRelativeValues( as.data.frame(table(d2[feature]))$Freq)
+    
+    
+    t1 <- as.data.frame(table(df$FAULT_TYPE))
+    t2 <- as.data.frame(table(df2$FAULT_TYPE))
+    tj <- merge(t1, t2, by = "Var1", all = T)
+    tj[is.na(tj)] <- 0
+    
+    
     # 
     if (input$dropdown_absRel =='relative'){
       
-      t$Freq <- asRelativeValues(t$Freq)
-      t$Freq2 <- asRelativeValues(t$Freq2)
+      tj$Freq.x <- asRelativeValues(tj$Freq.x)
+      tj$Freq.y <- asRelativeValues(tj$Freq.y)
       
     }
     
     fig <-
       plot_ly(
-        t,
+        tj,
         x = ~ Var1,
-        y = ~ Freq,
+        y = ~ Freq.x,
         type = 'bar',
         name = input$dropdown_plots1, 
-        color = "red"
+        marker = list(color = "#b33625")
       )
-    fig <- fig %>% add_trace(y = ~ Freq2, 
-                             name = input$dropdown_plots2,
-                             color ='black'
-                             )%>%
-      layout(plot_bgcolor= color_light,
-                                     paper_bgcolor = color_light)
-                               
-    fig <- fig %>% layout(xaxis = list(title = feature, showgrid = F),
-                          yaxis=list( showgrid = F)
-    )
     
+    if (input$dropdown_plots1 != input$dropdown_plots2) {
+      fig <- fig %>% add_trace(
+        y = ~ Freq.y,
+        name = input$dropdown_plots2,
+        marker = list(color = '#d95a00')
+      ) %>%
+        layout(plot_bgcolor = color_light,
+               paper_bgcolor = color_light)
+      
+      fig <-
+        fig %>% layout(xaxis = list(title = feature, showgrid = F),
+                       yaxis = list(showgrid = F))
+    }
     
     fig
     
@@ -820,11 +837,13 @@ server <- function(input, output, session) {
    print(as.data.frame(getSubset(name =  input$dropdown_plots1)))
    
    
-   if(input$dropdown_plots1 != input$dropdown_plots2){
+   # if(input$dropdown_plots1 != input$dropdown_plots2){
      compare_data$d1 <- as.data.frame(getSubset(name =  input$dropdown_plots1))
      compare_data$d2 <- as.data.frame(getSubset(name =  input$dropdown_plots2))
     
-     print(compare_data$d2)
+     # print(compare_data$d2)
+     print(c("nrows data 1", nrow(compare_data$d1)))
+     print(c("nrows data 2", nrow(compare_data$d)))
      
       # for (i in 1:8) {
       #   plt_name <- paste("plots_",i, sep = "") # to know which plot to use
@@ -840,10 +859,10 @@ server <- function(input, output, session) {
      output[["plots_6"]] <- renderPlotly({getPlot(categoricalFeatures[6])})
      output[["plots_7"]] <- renderPlotly({getPlot(categoricalFeatures[8])})
      output[["plots_8"]] <- renderPlotly({getPlot(categoricalFeatures[7])})
-   }else{
-     output[["plots_info"]] <- renderText({"Please select a different subset to compare."})
-     
-   }
+   # }else{
+   #   output[["plots_info"]] <- renderText({"Please select a different subset to compare."})
+   #   
+   # }
    
    
   

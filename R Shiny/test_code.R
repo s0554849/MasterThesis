@@ -623,3 +623,11 @@ aggregate(df, by = cbind(AGE) , FUN = sum)
             #, )
 formula = cbind(FAULT_COUNT, OBJECT_COUNT) ~  AGE
 
+
+##### MERGE #####
+
+t1 <- as.data.frame(table(df$FAULT_TYPE))
+t2 <- as.data.frame(table(df2$FAULT_TYPE))
+tj <- merge(t1, t2, by = "Var1", all = T)
+tj[is.na(tj)] <- 0
+tj
