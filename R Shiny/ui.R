@@ -23,27 +23,21 @@ supconflif <- c('support', 'confidence', 'lift')
 style_light <- "background-color: #FFFAFA;"
 style_dark <-"#faf1f1"
 
-initPlotsChoice <- c('Initial Data')
-
-
-
+initPlotsChoice <- c('Initial Data') 
 
 
 ui <- fluidPage(
   
-  # theme = bs_theme(version = 4, bootswatch = "sketchy", bg = "Red",fg = "Black" ),
   theme = shinytheme("united"),
-  # theme = "simplex.min.css",
-  
+
   setBackgroundColor(color =style_dark),
-  windowTitle = "Subgroup discovery",
   
-  #icon("cog", lib = "glyphicon"),
   # Application title
+  windowTitle = "Subgroup discovery",
   
   
   tags$head(tags$script(src = "message-handler.js")),
-  # ff6644
+  
   # Sidebar for user inputs
   navbarPage("Subgroup explorer",
              
@@ -65,10 +59,7 @@ ui <- fluidPage(
                                 ".csv")
                    ),
                    verbatimTextOutput("ruleCount"),
-                   # column(4,
-                   #actionButton("btUpload", "Use selected file", icon("file-upload"), width = "100%"),
-                   # ),
-                   # hr(),
+
                    selectizeInput(
                      'dropdown_subsets',
                      'Subsets',
@@ -76,11 +67,8 @@ ui <- fluidPage(
                      options = NULL,
                      width = NULL
                    ),
-                   #hr(),
+                   
                    fluidRow(
-                     #   column(
-                     #   6, actionButton("do", "Drop filter", icon("undo") , width = "100%")
-                     # ),
                      column(
                        12,
                        actionButton("btSaveSubset", "Save Subset", icon("table") ,
@@ -113,13 +101,12 @@ ui <- fluidPage(
                      12,
                      plotOutput(
                        "TargetBox",
-                       #brush = brushOpts(id = "plot1_brush"),
                        click = "click_bar"
                      )
                    )),
                  ),
                  
-                 # MainPanel for viz
+                 # MainPanel for visualization
                  
                  mainPanel(
                    width = 9,
@@ -145,9 +132,7 @@ ui <- fluidPage(
                             "))),
                    
                    
-                   # verbatimTextOutput("ruleCount"),
-                   
-                   # tabset for different vizs
+                   # tabset for different visualizations
                    wellPanel(
                      style = style_light,
                      tabsetPanel(
@@ -195,8 +180,6 @@ ui <- fluidPage(
                                   ),
                                     
                                     
-                                    
-                                  # ),
                                   column(
                                     9,
                                     fluidRow(
@@ -204,11 +187,7 @@ ui <- fluidPage(
                                     h4("Dynamic Tree by Fault count", align = "center"),
                                     collapsibleTreeOutput("collapsTree"),
                                              )
-                                    # ,
-                                    #   column(3,
-                                    #      plotlyOutput("aggregationLevelsBar"),
-                                    #          )
-                                      
+                                     
                                     ),
                                     fluidRow(
                                       column(6,
@@ -222,9 +201,6 @@ ui <- fluidPage(
                                       
                                       
                                     )
-                                    # hr(),
-                                    # h4("Sankey Plot by Fault count", align = "center"),
-                                    
                                     
                                   ),
                                 
@@ -267,7 +243,6 @@ ui <- fluidPage(
                            icon = icon("exchange"),
                            class="btn btn-primary btn-lg",
                            width = "100%"
-                           # class = "btn-success"
                          )
                        ),
                        
@@ -302,7 +277,6 @@ ui <- fluidPage(
                                          c('relative', 'absolute'),
                                          options = NULL,
                                        )
-                                       
                                 )
                                 ),
                                 # plots
@@ -383,4 +357,3 @@ ui <- fluidPage(
   ) # END OF NAV BAR
   
 ) # END OF UI
-

@@ -7,16 +7,17 @@
 #
 
 
-# To Deploy on Shiny.io 
-#install.packages('rsconnect')
+# To Deploy App on Shiny.io 
+# install.packages('rsconnect')
 # library(rsconnect)
-# rsconnect::setAccountInfo(name='s0554849', token='20BC445FCC06BD48656502B4F84A8513', secret='hJmkQReCsyaWZLfOQvzx2eLVHWuHWntwBm42pcIx')
+# rsconnect::setAccountInfo(name='s0554849', 
+#                           token='XXX', 
+#                           secret='XXX')
 # rsconnect::deployApp('/Users/benjaminwuthe/git/MasterThesis/R Shiny')
-
 
 library(shiny)
 
-# Define UI and Server for application in seperate files 
+# Define UI and Server for application in separate files 
 source('ui.R', local = TRUE)
 source(server.R)
 # Run the application 

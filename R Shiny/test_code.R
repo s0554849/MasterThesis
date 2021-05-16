@@ -772,7 +772,7 @@ as.data.frame(figcolor)
 
 #### get level 0 rules
 
-df <- read.csv("/Users/benjaminwuthe/Library/Mobile Documents/com~apple~CloudDocs/Masterarbeit/Joshuas stuff/Daten/SCHRITT_0_REGEL_BASIS.csv")
+#df <- read.csv("/Users/benjaminwuthe/Library/Mobile Documents/com~apple~CloudDocs/Masterarbeit/Joshuas stuff/Daten/SCHRITT_0_REGEL_BASIS.csv")
 
 round(df$FAULT_RATE,15)
 names(df)
@@ -785,7 +785,7 @@ names(df_agg0)
 
 
 
-write.csv(df_agg0,"/Users/benjaminwuthe/Library/Mobile Documents/com~apple~CloudDocs/Masterarbeit/agg0_2.csv" )
+#write.csv(df_agg0,"/Users/benjaminwuthe/Library/Mobile Documents/com~apple~CloudDocs/Masterarbeit/agg0_2.csv" )
 
 
 df$OBJECT_COUNT
