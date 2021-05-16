@@ -5,7 +5,7 @@ library(plotly)
 library(sortable)
 library(r2d3)
 library(collapsibleTree)
-
+library(visNetwork)
 
 items <-
   c(
@@ -53,7 +53,7 @@ ui <- fluidPage(
                sidebarLayout(
                  sidebarPanel(
                    style = style_light,
-                   width = 2,
+                   width = 3,
                    h2("Inputs"),
                    
                    fileInput(
@@ -64,6 +64,7 @@ ui <- fluidPage(
                                 "text/comma-separated-values,text/plain",
                                 ".csv")
                    ),
+                   verbatimTextOutput("ruleCount"),
                    # column(4,
                    #actionButton("btUpload", "Use selected file", icon("file-upload"), width = "100%"),
                    # ),
@@ -121,7 +122,7 @@ ui <- fluidPage(
                  # MainPanel for viz
                  
                  mainPanel(
-                   width = 10,
+                   width = 9,
                    tags$head(tags$style(HTML("
                             #ruleCount {
                             background-color: #FFFAFA;
@@ -144,13 +145,13 @@ ui <- fluidPage(
                             "))),
                    
                    
-                   verbatimTextOutput("ruleCount"),
+                   # verbatimTextOutput("ruleCount"),
                    
                    # tabset for different vizs
                    wellPanel(
                      style = style_light,
                      tabsetPanel(
-                       tabPanel(title = "Tree",
+                       tabPanel(title = "Exploration",
                                 br(),
                                 fluidRow(
                                   column(
@@ -179,7 +180,7 @@ ui <- fluidPage(
                                       column(4,
                                              numericInput("treeDepth", min = 1, max = 4, value = 1, label = "Tree depth")
                                       ),
-                                      column(4,
+                                      column(6,
                                              selectizeInput(
                                                'dropdownHideStar',
                                                'Hide * in Sankey',
@@ -199,13 +200,14 @@ ui <- fluidPage(
                                   column(
                                     9,
                                     fluidRow(
-                                      column(9,
+                                      column(12,
                                     h4("Dynamic Tree by Fault count", align = "center"),
                                     collapsibleTreeOutput("collapsTree"),
-                                             ),
-                                      column(3,
-                                         plotlyOutput("aggregationLevelsBar"),
                                              )
+                                    # ,
+                                    #   column(3,
+                                    #      plotlyOutput("aggregationLevelsBar"),
+                                    #          )
                                       
                                     ),
                                     fluidRow(
@@ -304,10 +306,15 @@ ui <- fluidPage(
                                 )
                                 ),
                                 # plots
+                                hr(),
                                 
+                                h4("From Selection 1 generated Rules"),
+                                visNetworkOutput("rules_graph"),
+                                hr(),
                                 verbatimTextOutput("plots_info"),
                                 hr(),
                                 plotlyOutput("plots_1"),
+                                plotlyOutput("plots_9"), # Aggregation level plot
                                 
                                 hr(),
                                 fluidRow(
@@ -338,6 +345,8 @@ ui <- fluidPage(
                                 ),
                                 
                                 plotlyOutput("plots_8"),
+                                
+                                # plotlyOutput("plots_9"),
                                 hr()
                                 
                                 

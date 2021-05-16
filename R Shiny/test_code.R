@@ -10,7 +10,72 @@ library(plotly)
 #         INIT STUFF           #
 #                              #
 ################################
+#
 
+
+# df_covid <- read.csv(url("https://impfdashboard.de/static/data/germany_deliveries_timeseries_v2.tsv"), sep = "\t")
+
+files <- c(
+  "SCHRITT_0_REGEL_BASIS.csv",
+  "SCHRITT_1_CLOSED_NON_DERIVABLE_ITEMSETS.csv",
+  "SCHRITT_2_1_VARIABLE_POSITIVE_IMPROVEMENT.csv",
+  "SCHRITT_2_2_NEGATIVE_REPLACEMENT.csv",
+  "SCHRITT_2_3_CONDENSED_ITEMSET.csv",
+  "SCHRITT_3_SUBGROUP_SUPPRESSION.csv",
+  "SCHRITT_4_1_MINSUP_MINCONF.csv",
+  "SCHRITT_4_2_MINIMAL_IMPROVEMENT.csv",
+  "SCHRITT_5_1_WEIGHTED_SELECTION.csv",
+  "SCHRITT_5_2_VARIABLE_DESCRIPTION_BASED_SELECTION.csv"
+)
+
+
+for( f in files){
+  df_size <-read.csv(paste("data/",f,sep = ''))
+ cat(nrow(df_size), "\n")
+  
+}
+
+
+
+
+df_size <- read.csv("data/SCHRITT_0_REGEL_BASIS.csv")
+df_size <- read.csv("data/SCHRITT_2_3_CONDENSED_ITEMSET.csv")
+df_size <- read.csv("data/SCHRITT_5_1_WEIGHTED_SELECTION.csv")
+df_size <- read.csv("data/SCHRITT_5_1_WEIGHTED_SELECTION.csv")
+df_size <- read.csv("data/SCHRITT_5_1_WEIGHTED_SELECTION.csv")
+df_size <- read.csv("data/SCHRITT_5_1_WEIGHTED_SELECTION.csv")
+df_size <- read.csv("data/SCHRITT_5_1_WEIGHTED_SELECTION.csv")
+df_size <- read.csv("data/SCHRITT_5_1_WEIGHTED_SELECTION.csv")
+df_size <- read.csv("data/SCHRITT_5_1_WEIGHTED_SELECTION.csv")
+df_size <- read.csv("data/SCHRITT_5_1_WEIGHTED_SELECTION.csv")
+
+
+
+library(RColorBrewer)
+
+a <- c("AirConditioning","BreakFluid","BreakPad","EngineControl","Exhaust","Gearbox","SparkPlugs","TurboCharger")
+b <- c("AirConditioning" ,"BreakFluid"      ,"BreakPad",        "EngineControl",   "Exhaust"         ,"SparkPlugs"     )
+typeof(a[1])
+
+a[! a %in% b]
+
+
+as.character(a)
+ 
+txt <- "* or NormalRural or Suburban or Village"
+
+l<-
+
+colorRampPalette( brewer.pal(9,"YlOrRd") )(50)
+
+colorRampPalette( brewer.pal(9,"YlOrRd") )(50)
+
+
+print(possibleFeatures[! possibleFeatures %in%  ft])
+
+# str( colorRampPalette(brewer.pal(n = 5, name = "YlOrRd")(50))
+
+#
 df <- read.csv('SCHRITT_4_1_MINSUP_MINCONF.csv')# Initial dataset
 df <-read.csv('data/SCHRITT_2_3_CONDENSED_ITEMSET.csv')
 df <- read.csv("data/SCHRITT_5_1_WEIGHTED_SELECTION.csv")
@@ -20,6 +85,8 @@ df_cnts <- as.data.frame( sort(table(df$FAULT_TYPE),decreasing =  FALSE))
 
 # names(df) # show columnnames
 #
+
+as.list(unique(df["AGE"]))
 
 
 interesting_cols <- c("FAULT_TYPE","rules","support","confidence","lift",
@@ -293,6 +360,7 @@ plot(twitSet, type = 'intersectStack', showHierarchy = TRUE)
 
 
 # drop cols from df
+df_sub <- df
 df_sub <- subset(df, select= -c(rules,support,confidence, 
                                 lift,FAULT_COUNT,OBJECT_COUNT#,
                                 #FAULT_RATE#,AGGREGATION_LEVEL,SET_SIZE
@@ -329,10 +397,15 @@ treetest<-function(){
   #                 )
 }
 
+rls_tree<-rpart.rules(tree)
 
+rls_tree<-as.data.frame(rls_tree)
+rls_tree[3,11]
 
 tree <- treetest()
 tree$variable.importance
+
+
 # tree$ordered
 
 print(rpart.rules(tree))
@@ -459,6 +532,33 @@ treemap <- plot_ly(
   maxdepth = -1
 )
 treemap
+
+
+### get legend from plotly??
+
+library(plotly)
+
+t <- as.data.frame(table(df$FAULT_TYPE))
+t
+
+t2 <- as.data.frame(table(df2$FAULT_TYPE))
+t2
+fig <- plot_ly(x=t$Var1,y=t$Freq, type = 'bar')
+
+
+
+
+fig <- plot_ly(x = df$FAULT_TYPE, y=df$FAULT_COUNT, type ="scatter", color = df$support)
+str(fig)
+
+fig_color <- fig$x$attrs[[1]]$color
+
+
+
+x <- fig
+
+
+
 
 
 ##################
@@ -631,3 +731,137 @@ t2 <- as.data.frame(table(df2$FAULT_TYPE))
 tj <- merge(t1, t2, by = "Var1", all = T)
 tj[is.na(tj)] <- 0
 tj
+
+fig <-
+  plot_ly(
+    tj,
+    x = ~ Var1,
+    y = ~ Freq.x,
+    type = 'bar',
+    name = "XXXJXJXJIAJSIA",
+    marker = list(color = "#b33625")
+  ) #%>%
+  # layout(plot_bgcolor = color_light,
+         # paper_bgcolor = color_light)
+
+fig <-
+  fig %>% layout(xaxis = list(title = "feature", showgrid = F),
+                 yaxis = list(showgrid = F))
+
+
+if (input$dropdown_plots1 != input$dropdown_plots2) {
+  fig <- fig %>% add_trace(
+    y = ~ Freq.y,
+    name = 'input$dropdown_plots2',
+    marker = list(color = '#d95a00')
+  )
+}
+
+
+## GET COLOR INFORMATION FROM PLOT (NAME AND color)
+figcolor<-list()
+figcolor$c[1] <- fig$x$attrs[[1]]$marker$color
+figcolor$c[2]<- fig$x$attrs[[2]]$marker$color
+
+figcolor 
+
+figcolor$name[1]<-fig$x$attrs[[-1]]$name
+figcolor$name[2]<-fig$x$attrs[[1]]$name
+as.data.frame(figcolor)
+
+
+#### get level 0 rules
+
+df <- read.csv("/Users/benjaminwuthe/Library/Mobile Documents/com~apple~CloudDocs/Masterarbeit/Joshuas stuff/Daten/SCHRITT_0_REGEL_BASIS.csv")
+
+round(df$FAULT_RATE,15)
+names(df)
+head(df)
+df_cols <-select(df, c(FAULT_TYPE,MODEL,AGE, DEALERSHIP,CUSTOMER_TYPE,  USER_CUSTOMISED,COUNTRY,GEO_TYPE, FAULT_COUNT,OBJECT_COUNT,FAULT_RATE,AGGREGATION_LEVEL))
+
+df_agg0 <-subset(df_cols, AGGREGATION_LEVEL ==0)
+
+names(df_agg0)
+
+
+
+write.csv(df_agg0,"/Users/benjaminwuthe/Library/Mobile Documents/com~apple~CloudDocs/Masterarbeit/agg0_2.csv" )
+
+
+df$OBJECT_COUNT
+
+hist(subset(df_agg0, OBJECT_COUNT < 10000 | OBJECT_COUNT> 100)$OBJECT_COUNT, breaks = 50 , freq = F)
+
+
+
+#### Collabseble elements
+library(shiny)
+
+ui <- shinyUI(bootstrapPage(
+  absolutePanel(
+    id = "controls", class = "panel panel-default", fixed = TRUE,
+    draggable = TRUE, top = 60, left = "auto", right = 20, bottom = "auto",
+    width = 330, height = "auto",
+    HTML('<button data-toggle="collapse" data-target="#demo">Collapsible</button>'),
+    tags$div(id = 'demo',  class="collapse",
+             checkboxInput('input_draw_point', 'Draw point', FALSE ),
+             verbatimTextOutput('summary')))
+))
+
+server <- shinyServer(function(input, output, session) {
+  output$summary <- renderPrint(print(cars))
+  
+})
+
+shinyApp(ui = ui, server = server)
+
+
+##### INVERT suggested feature values from tree
+featSuggestion <- "AGE"
+possibleFeatures<-NULL
+possibleFeatures <-  unique(df[featSuggestion])
+
+print(c("column: ", possibleFeatures))
+featSuggestionTree <-c("*")#rpart.rules(tree)[[5]][1]
+
+
+
+feat_diff <- possibleFeatures[! possibleFeatures  %in% featSuggestionTree]
+feat_diff
+feat_diff <- possibleFeatures[! possibleFeatures  %in% featSuggestionTree]
+
+possibleFeatures
+as.array( possibleFeatures)
+
+
+
+paste(c("Next best feature by regression Tree: \n", featSuggestion,"\nConsider feature values:\n",feat_diff))
+
+
+rpart.rules(tree_r)
+
+
+##### df to rules and plot
+
+library(arules)
+library(arulesViz)
+
+
+toTransactions <- function(df){
+  df_trans <- df_agg0
+  cars_data_full <- df_trans[rep(seq_len(nrow(df_trans)), df_trans$FAULT_COUNT),]
+  cars_data_full <- subset(cars_data_full, select=-c(AGGREGATION_LEVEL, 
+                                                     FAULT_RATE,FAULT_COUNT, OBJECT_COUNT))
+  cars_data_full_t <- as(cars_data_full, "transactions")
+  rules <- apriori(cars_data_full_t)
+  
+  rules$rhs
+  rules_2<-subset(rules, subset=rhs %pin% "FAULT_TYPE=" )
+  
+  
+  plot(rules_2, method = "graph",  engine = "htmlwidget") 
+  
+}
+
+toTransactions()
+  

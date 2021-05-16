@@ -9,6 +9,10 @@ library(crosstalk) # double plot once with bscols
 
 library(alluvial) # sankey plots
 library(RColorBrewer)
+library(arules)
+library(arulesViz)
+
+library(visNetwork)
 
 # Init global variables and helper functions
 
@@ -214,11 +218,6 @@ server <- function(input, output, session) {
       rv$data <- df
       rv$data
     } else{
-      print("data function")
-      # rv$data <- getSubset(name = 'Init Dataset')
-      # rv$data
-
-      # df <- rv$data
       rv$data <- df
       df
     }
@@ -264,8 +263,9 @@ server <- function(input, output, session) {
           print(paste("For col", el, "filter by", treUpd[el]))
         
         d<-d[d[,el]==treUpd[el],]
-        return(d)
+        summary(d)
       } 
+        return(d)
       
     }
   }
@@ -309,8 +309,13 @@ server <- function(input, output, session) {
     # IF KPI -> take supp, conf or lift. Otherwhise selected feature
     if(input$scatterColor == "KPI"){
       axs$z <- getZAxis(axs$x, axs$y)
+      col_scale <- "Reds"
     }else{
       axs$z <- input$scatterColor
+      col_scale <-colorRampPalette( brewer.pal(9,"YlOrRd") )(8+length(unique(d[, axs$z])))# brewer.pal(n = length(unique(d[, axs$z])), name = "YlOrRd")
+      #cut off some xellow 
+      col_scale <- col_scale[-c(1:4)]
+      
     }
     
     upd <- rv$data
@@ -321,7 +326,7 @@ server <- function(input, output, session) {
         x = d[, axs$x],
         y = d[, axs$y],
         color = d[, axs$z],
-       colors = 'Reds' ,
+       colors = col_scale,# 'Reds' ,
         type = "scatter",
         mode= "markers",
         key = nms,
@@ -337,7 +342,7 @@ server <- function(input, output, session) {
           lift
         )
       ) %>% 
-      layout(legend = list(orientation = 'h'))%>%
+      # layout(legend = list(orientation = 'v'))%>%
       layout(plot_bgcolor= "#fffbfb",
     paper_bgcolor = color_light) %>%
       highlight("plotly_selected", dynamic = TRUE)
@@ -473,13 +478,9 @@ server <- function(input, output, session) {
     treUpd <<-input$treeUpdate
     
     
-    # INFO ABOUT SELECTION IN TREE
-    output$treeSummary <- renderPrint(
-      if (! is.null(treUpd)){
-        str(treUpd)
-      }
-      
-      )
+    
+    
+
   
     d <-rv$data
     # # Prepare Data - 
@@ -497,10 +498,25 @@ server <- function(input, output, session) {
     df_sub <- subset(d, select= -c(rules,support,confidence,
                                   lift,#FAULT_COUNT, OBJECT_COUNT
                                   #FAULT_RATE#
-                                  #,AGGREGATION_LEVEL,
+                                  # AGGREGATION_LEVEL,
                                   SET_SIZE
                                   ))
     
+    faults_by_treepath <<-sum(df_sub$FAULT_COUNT)
+    objs_by_treepath <<- sum(df_sub$OBJECT_COUNT)
+    
+    # INFO ABOUT SELECTION IN TREE
+    output$treeSummary <- renderPrint(if (!is.null(treUpd)) {
+      cat(
+        str(treUpd), "\n",
+        "Faults:",
+        faults_by_treepath,
+        "\n Objects:",
+        objs_by_treepath,"\n F.Rate:",
+        1000*faults_by_treepath/objs_by_treepath
+      )
+      
+    })
     
     
     ########################################################
@@ -508,11 +524,6 @@ server <- function(input, output, session) {
     # CREATE a HEATMAP - representing two features and the weighted faultrate
     
     # find features for heatmap
-    a <-c('a','b','c','d','e')
-    b <-c('c','e')
-    
-    a[!a %in% b]
-    
         
     heat_feat <- selectedHier[!selectedHier %in% names(treUpd)] # drop selected features from collapsed tree from the hierachy 
   
@@ -538,7 +549,7 @@ server <- function(input, output, session) {
                    xaxis=list(title="Aggregation levels", showgrid = F),
                    yaxis=list(title="# of rules", showgrid = F))
           
-          output$aggregationLevelsBar <- renderPlotly({f}) 
+          # output$aggregationLevelsBar <- renderPlotly({f}) 
           
           
           # filter aggregated data. Use the desired features which are agg level 5 
@@ -583,7 +594,35 @@ server <- function(input, output, session) {
     })
     
     # INFOTEXT NEXT BEST FEATURE
-    suggestionText <- paste("Next best feature by regression Tree: \n", rpart.rules(tree_r)[[3]][1],"\nConsider feature values:", rpart.rules(tree_r)[[5]][1])
+    
+    
+    featSuggestion <- rpart.rules(tree_r)[[3]][1] # Feature by tree
+    possibleFeatures <- as.vector(unique(df_sub[[featSuggestion]]))
+    print(c("Possible features: ", possibleFeatures))
+    featSuggestionTree <-rpart.rules(tree_r)[[5]][1] 
+    
+    featSuggestionTree <-  strsplit(featSuggestionTree,' or ')[[1]]
+    print("Split VAUES: ")
+    print(featSuggestionTree)
+    # feature values where to split
+    feat_diff <- possibleFeatures[!possibleFeatures %in% featSuggestionTree]
+    print(c("feat diff",feat_diff))
+    suggestionText <- paste("Next best feature by regression Tree: \n", featSuggestion,"\nConsider feature values:\n")
+    
+    # print("For schleife")
+    for (f in feat_diff){
+      # print(f)
+      suggestionText <- paste(suggestionText, f)
+    }
+
+    
+    
+    # print(suggestionText)
+    # print(feat_diff)
+    # t <- paste(feat_diff)
+    # print(t)
+    # suggestionText <- paste(suggestionText, t)
+    
     output$treeSuggestion <- renderText(suggestionText)
     
     
@@ -664,7 +703,8 @@ server <- function(input, output, session) {
     #selectedHier <<- input$bucketLHS
     #äropcols <- append(selectedHier)
     
-    df_sub <- subset(rv$data, select= -c(rules,support,confidence,
+    df_sub <-rv$data[, interesting_cols]
+    df_sub <- subset(df_sub, select= -c(rules,support,confidence,
                                     lift,FAULT_COUNT, OBJECT_COUNT
                                     #FAULT_RATE#
                                     ,AGGREGATION_LEVEL,SET_SIZE
@@ -694,10 +734,10 @@ server <- function(input, output, session) {
   output$decisionTreeClass <- renderPlot({
     #selectedHier <<- input$bucketLHS
     #äropcols <- append(selectedHier)
-    
-    df_sub <- subset(rv$data, select= -c(rules,support,confidence,
+    df_sub <- rv$data[, interesting_cols]
+    df_sub <- subset(df_sub, select= -c(rules,support,confidence,
                                          lift,FAULT_COUNT, OBJECT_COUNT
-                                         #FAULT_RATE#
+                                         ,FAULT_RATE
                                          ,AGGREGATION_LEVEL,SET_SIZE
     ))
 
@@ -774,7 +814,7 @@ server <- function(input, output, session) {
   
   
  
-  getPlot <- function(feature ){
+  getPlot <- function(feature, showLegend ){
     # Create a barplot by given feature
     
     # d1<-getSubset(name = input$dropdown_plots1)
@@ -800,11 +840,11 @@ server <- function(input, output, session) {
     # t$Freq2 <- asRelativeValues( as.data.frame(table(d2[feature]))$Freq)
     
     
-    t1 <- as.data.frame(table(df[feature]))
-    t2 <- as.data.frame(table(df2[feature]))
+    t1 <- as.data.frame(table(d1[feature]))
+    t2 <- as.data.frame(table(d2[feature]))
     tj <- merge(t1, t2, by = "Var1", all = T)
     tj[is.na(tj)] <- 0
-    
+    print(tj)
     
     # 
     if (input$dropdown_absRel =='relative'){
@@ -822,53 +862,82 @@ server <- function(input, output, session) {
         type = 'bar',
         name = input$dropdown_plots1, 
         marker = list(color = "#b33625")
-      )
+      ) %>%
+      layout(plot_bgcolor = color_light,
+             paper_bgcolor = color_light)
+    
+    fig <-
+      fig %>% layout(xaxis = list(title = feature, showgrid = F),
+                     yaxis = list(showgrid = F,
+                                  title = paste(input$dropdown_absRel, " Freq")
+                                  ),
+                     showlegend = showLegend
+                     )
     
     if (input$dropdown_plots1 != input$dropdown_plots2) {
       fig <- fig %>% add_trace(
         y = ~ Freq.y,
         name = input$dropdown_plots2,
         marker = list(color = '#d95a00')
-      ) %>%
-        layout(plot_bgcolor = color_light,
-               paper_bgcolor = color_light)
-      
-      fig <-
-        fig %>% layout(xaxis = list(title = feature, showgrid = F),
-                       yaxis = list(showgrid = F))
+      )
     }
     
     fig
     
   }
+  
+  toTransactions <- function(df_trans){
+    # df_trans <- df
+    cars_data_full <- df_trans[rep(seq_len(nrow(df_trans)), df_trans$FAULT_COUNT),]
+    if (nrow(cars_data_full)>0){
+    cars_data_full <- subset(cars_data_full, select=-c(AGGREGATION_LEVEL, 
+                                                         FAULT_RATE,FAULT_COUNT,
+                                                       OBJECT_COUNT,support,confidence, lift, SET_SIZE
+                                                       ))
+      cars_data_full_t <- as(cars_data_full, "transactions")
+      rules <- apriori(cars_data_full_t, parameter = list(supp = 0.2, conf = 0.3))
+      
+      rules<-subset(rules, subset=rhs %pin% "FAULT_TYPE=" )
+      print(c("rules", length(rules)))
+      
+      # output$rules_graph <- renderUI({plot(rules, method = "graph", engine ="htmlwidget") })
+      output$rules_graph <- renderVisNetwork({plot(rules, method = "graph"
+                                                , engine = "visNetwork"
+                                              # , engine = "htmlwidget"
+                                              )})
+      
+      
+      
+      # return (rules)
+      
+    }
+    # plot(rules, method = "matrix",  engine = "htmlwidget") 
+    
+  }
     
  createPlots <- function(){
-   print(paste("make plots", input$dropdown_plots1))
-   print(as.data.frame(getSubset(name =  input$dropdown_plots1)))
+   # print(paste("make plots", input$dropdown_plots1))
+   # print(as.data.frame(getSubset(name =  input$dropdown_plots1)))
    
    
    # if(input$dropdown_plots1 != input$dropdown_plots2){
      compare_data$d1 <- as.data.frame(getSubset(name =  input$dropdown_plots1))
      compare_data$d2 <- as.data.frame(getSubset(name =  input$dropdown_plots2))
     
-     # print(compare_data$d2)
-     print(c("nrows data 1", nrow(compare_data$d1)))
-     print(c("nrows data 2", nrow(compare_data$d)))
-     
-      # for (i in 1:8) {
-      #   plt_name <- paste("plots_",i, sep = "") # to know which plot to use
-      #   print(i)
-      #   output[[plt_name]] <- renderPlotly({getPlot(categoricalFeatures[i])})
-      # }
+     toTransactions(compare_data$d1)
+     # 
+
+
      output[["plots_info"]] <- renderText({""})
-     output[["plots_1"]] <- renderPlotly({getPlot(categoricalFeatures[1])})
-     output[["plots_2"]] <- renderPlotly({getPlot(categoricalFeatures[2])})
-     output[["plots_3"]] <- renderPlotly({getPlot(categoricalFeatures[3])})
-     output[["plots_4"]] <- renderPlotly({getPlot(categoricalFeatures[4])})
-     output[["plots_5"]] <- renderPlotly({getPlot(categoricalFeatures[5])})
-     output[["plots_6"]] <- renderPlotly({getPlot(categoricalFeatures[6])})
-     output[["plots_7"]] <- renderPlotly({getPlot(categoricalFeatures[8])})
-     output[["plots_8"]] <- renderPlotly({getPlot(categoricalFeatures[7])})
+     output[["plots_1"]] <- renderPlotly({getPlot(categoricalFeatures[1], TRUE)})
+     output[["plots_9"]] <- renderPlotly({getPlot("AGGREGATION_LEVEL", FALSE)})
+     output[["plots_2"]] <- renderPlotly({getPlot(categoricalFeatures[2], FALSE)})
+     output[["plots_3"]] <- renderPlotly({getPlot(categoricalFeatures[3], FALSE)})
+     output[["plots_4"]] <- renderPlotly({getPlot(categoricalFeatures[4], FALSE)})
+     output[["plots_5"]] <- renderPlotly({getPlot(categoricalFeatures[5], FALSE)})
+     output[["plots_6"]] <- renderPlotly({getPlot(categoricalFeatures[6], FALSE)})
+     output[["plots_7"]] <- renderPlotly({getPlot(categoricalFeatures[8], FALSE)})
+     output[["plots_8"]] <- renderPlotly({getPlot(categoricalFeatures[7], FALSE)})
    # }else{
    #   output[["plots_info"]] <- renderText({"Please select a different subset to compare."})
    #   
