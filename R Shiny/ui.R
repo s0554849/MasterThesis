@@ -339,17 +339,15 @@ ui <- fluidPage(
                       fluidRow(column(
                         12,
                         style = style_light,
-                        h1("Subgroup X-plorer"),
+                        h1("Subgroup Explorer"),
                         # h2('Explaination'),
                         p(
                           'This tool was developed as a practical part of Benjamin Wuthe\'s master\'s thesis in the Business Informatics program at HTW Berlin.'
                         ),
+                        
+                   
                         hr(),
-                        h3('What is'),
-                        p('Subgroup explorer'),
-                        h3('How to use'),
-                        p('Lorem Ipsum\n'),
-                        hr(),
+                        p(),
                         hr()
                       ))
              ) # END OF TABPANEL

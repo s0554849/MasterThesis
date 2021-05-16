@@ -7,7 +7,7 @@ library(rpart)
 library(rpart.plot)
 library(crosstalk) # double plot once with bscols
 
-library(alluvial) # sankey plots
+library(alluvial) # sankey plot
 library(RColorBrewer)
 library(arules)
 library(arulesViz)
@@ -16,7 +16,7 @@ library(visNetwork)
 
 # Init global variables and helper functions
 
-options(shiny.maxRequestSize=100*1024^2)
+options(shiny.maxRequestSize=100*1024^2) # increase file upload limit
 
 interesting_cols <-
   c(
@@ -41,9 +41,9 @@ interesting_cols <-
 
 supconflif <- c("support", "confidence", "lift")
 
-elementHeight <- 50 # standard elemt height for e.g. button
+elementHeight <- 50 # standard element height for e.g. button
 
-# care for categorical features
+# consider these categorical features
 categoricalFeatures <-
   c(
     "FAULT_TYPE",
@@ -64,8 +64,8 @@ xyzArr$x = "support"
 xyzArr$y = "confidence"
 xyzArr$z = "KPI"
 
-
 applyCategory <- function(data) {
+  # featuresin DF as factor
   data[categoricalFeatures] <-
     lapply(data[categoricalFeatures], factor)
   
@@ -73,7 +73,8 @@ applyCategory <- function(data) {
   data
 }
 
-df <- applyCategory(read.csv('SCHRITT_4_1_MINSUP_MINCONF.csv')[, interesting_cols]) # Initial dataset
+df <- applyCategory(
+  read.csv('SCHRITT_4_1_MINSUP_MINCONF.csv')[, interesting_cols]) # Initial dataset
 
 df_names <- c('Init Dataset')
 df_subsets <- list(list(df))
@@ -88,9 +89,8 @@ server <- function(input, output, session) {
   compare_data <- reactiveValues()
   selectedHier <- reactiveValues()
   
-  
-  
   getSubset <- function(name) {
+    # return a subset
     if (name == 'Current Data'){
       print(c('current data required\n', rv$data))
       
@@ -113,15 +113,14 @@ server <- function(input, output, session) {
                       choices = df_names)
     updateSelectInput(session, "dropdown_plots2",
                       choices = df_names)
-    
-    
   }
   
   ###################
-  # IPPUT SECTION   #
+  # INPUT SECTION   #
   ###################
   
   dataModal <- function(failed = FALSE) {
+    # Dialogbox to save a subset 
     modalDialog(
       textInput("newsubgroup", "Save subgroup",
                 placeholder = 'Enter subgroup name'),
@@ -131,20 +130,14 @@ server <- function(input, output, session) {
         modalButton("Cancel"),
         actionButton("bt_add_subgroup", "OK")
       ),
-      # addSubset('test', df),
-      # print(new_df),
     )
   }
   
-  
   observeEvent(input$do, {
+    # depricated
     rv$data <- df
     df_subsets[2] %>%
       print()
-    
-    # session$sendCustomMessage(
-    #   type = 'testmessage',
-    #   message = 'Thank you for clicking')
   })
   
   
@@ -152,32 +145,22 @@ server <- function(input, output, session) {
     showModal(dataModal(failed = TRUE))
   })
   
-
-  
   observeEvent(input$btUseTreeSelection, {
     
     d <- rv$data
-    print(d$AGE)
     d <- filterDfByTreeselectionfunction(d)
     rv$data <-d
     
   })
   
-  
-  
   observeEvent(input$bt_add_subgroup, {
-    # print('bt_add_subgroup OK Klick')
-    
-    #print(input$newsubgroup)
+
     addSubset(input$newsubgroup, rv$data)
-    # updateSelectInput(session, "dropdown_subsets",
-    #                   choices = df_names)
     removeModal()
   })
   
   observeEvent(input$dropdown_subsets, {
     print('dropdown activated')
-    #print(getSubset(name = input$dropdown_subsets))
     rv$data <- as.data.frame(getSubset(name = input$dropdown_subsets))
     
   })
@@ -198,7 +181,6 @@ server <- function(input, output, session) {
     df <- rv$data[input$fileTable2_rows_all, ]
     rv$data <- df
     print("BT Filter clicked")
-    #print(df)
   })
 
   
@@ -223,10 +205,8 @@ server <- function(input, output, session) {
     }
   })
   
-
- 
-
   observeEvent(input$click_bar,{
+    # not realized 
     #df_cnts<-rv$data
     #print(nearPoints(df_cnts, input$plot1_click, addDist = TRUE))
   })
@@ -238,9 +218,6 @@ server <- function(input, output, session) {
   })
   
   
-
-  
-  
   observeEvent(input$scatterX,{
     xyzArr$x = input$scatterX
   })
@@ -249,7 +226,8 @@ server <- function(input, output, session) {
     xyzArr$y = input$scatterY
   })
   observeEvent(input$scatterColor,{
-    xyzArr$c = input$scatterColor
+    print(input$scatterColor)
+    xyzArr$z = input$scatterColor
   })
   
   
@@ -278,6 +256,7 @@ server <- function(input, output, session) {
     if (x != y) {
       for (el in xy) {
         scl <- scl[scl != el]
+        
       }
       return(scl)
     }
@@ -303,8 +282,8 @@ server <- function(input, output, session) {
   output$Scatter <- renderPlotly({
     # Get x and y axis, and find last part from supp conf lift in zaxis
     axs <- xyzArr
-    #print(paste("X: ", xaxis, " Y: ", yaxis, " Z: ", zaxis))
-    d <- rv$data#df#-as.data.frame( rv$data)
+
+    d <- rv$data
     
     # IF KPI -> take supp, conf or lift. Otherwhise selected feature
     if(input$scatterColor == "KPI"){
@@ -349,81 +328,22 @@ server <- function(input, output, session) {
     
     layout(
       p,
+      title= paste("Rules by", axs$z),
       xaxis = list(title = axs$x),
       yaxis = list(title = axs$y),
       dragmode = "lasso"
     )
-    
-    # fig <- fig %>% layout()
-    #~FAULT_TYPE)
   })
   
   # rules by target bar plot
   output$TargetBox <- renderPlot(
     height = 200,
     {
-      #data.model <<- read.csv(input$fileIn$datapath,
-      #               sep = ",")
-      print("Target Box start")
       df_cnts <- rv$data
       df_cnts <- as.data.frame( sort(table(df_cnts$FAULT_TYPE),decreasing =  TRUE))
       ggplot(df_cnts, aes(Var1,Freq)  )  + geom_col(fill='Red', alpha =0.75)   
     }
   )  
-  
-  
-  # Ovserve all actions
-  # observe({
-  #   print("Observer listening")
-  #   # Read CSV if changes
-  #   if (  is.null(input$fileIn$datapath)){
-  #     print("Observer filpath is null")
-  #   }
-  #   else{
-  #     # New file selected
-  #     print("Observer filpath is NOT null")
-  #   }
-  # 
-  # })
-
-  # data <- reactive(input$do,{
-  #   if (is.null(input$fileIn$datapath)){
-  #     print("Observer filpath is null")
-  #   }
-  #   else{
-  #     # New file selected
-  #     print("Observer filpath is NOT null")
-  #     df <<- read.csv(input$fileIn$datapath,
-  #                     sep = ",")
-  #     df
-  # 
-  #   }
-  # })
-  
-
-  
-  # output$sankeyPlot <- renderPlot({
-  #   sankey_cols <- input$bucketLHS
-  #   dats_all <- rv$data %>%
-  #     group_by_at(vars(one_of(sankey_cols)))%>%  # group them# data
-  #     # group_by( vars(sankey_cols)) %>%  # group them
-  #     summarise(Freq = FAULT_COUNT)
-  # 
-  #   l <- length(sankey_cols)
-  # 
-  # 
-  #   # now plot it
-  #   alluvial( dats_all[,1:l],
-  #             freq=dats_all$Freq,
-  #             border= NA ,
-  #             col =  "Red",
-  #             alpha = 0.3
-  #             )
-  # 
-  # })
-  
-
-
   
   
   output$collapsTree <- renderCollapsibleTree({
@@ -441,9 +361,6 @@ server <- function(input, output, session) {
     form = as.formula(paste(". ~", paste(selectedHier, collapse = " + ")))
     d <- aggregate(form, data = d,FUN = sum)
     
-    # d$perc<-sapply(d$FAULT_COUNT, FUN = function(x)x/sum(d$FAULT_COUNT))
-    
-    # print(d)
     collapsibleTreeSummary(
       d,  hierarchy = selectedHier, 
       # percentOfParent = TRUE,
@@ -467,9 +384,8 @@ server <- function(input, output, session) {
   }
  
   
-  # Observe Tree and handle several plots on page and train tree for suggestion
-  # Updated Uputpus: Information, suggestion plot with Tree and sankey chart
-
+  # Observe Tree-Plot and handle several plots on page and train tree for suggestion
+  # Updated Outputs: Information, suggestion plot with Tree and sankey chart
   
   observeEvent(
     {input$treeUpdate 
@@ -478,12 +394,8 @@ server <- function(input, output, session) {
     treUpd <<-input$treeUpdate
     
     
-    
-    
-
-  
     d <-rv$data
-    # # Prepare Data - 
+    # Prepare Data
     for (el in names(treUpd)) {
       filter_col <- el
       filter_val <-
@@ -491,8 +403,6 @@ server <- function(input, output, session) {
 
       d<-d[d[,el]==treUpd[el],]
     }
-    
-
     
     # Prepare data, filtered Data and plot 
     df_sub <- subset(d, select= -c(rules,support,confidence,
@@ -549,9 +459,6 @@ server <- function(input, output, session) {
                    xaxis=list(title="Aggregation levels", showgrid = F),
                    yaxis=list(title="# of rules", showgrid = F))
           
-          # output$aggregationLevelsBar <- renderPlotly({f}) 
-          
-          
           # filter aggregated data. Use the desired features which are agg level 5 
           theat <- subset(t,  select = c(heat_feat, "f_rate"), AGGREGATION_LEVEL == length(names(treUpd)),)
           
@@ -574,27 +481,16 @@ server <- function(input, output, session) {
     # TRAIN AND PLOT REGRESSIONTREE 
     tree_r<- rpart(
       FAULT_RATE ~ .,
-      #FAULT_TYPE ~ .,
       data = df_sub,
       method = "anova",# "class",
       maxdepth = input$treeDepth)
     
     
-    output$supportTree <- renderPlot({
+      output$supportTree <- renderPlot({
       rpart.plot(tree_r , box.palette = "Reds", snip = TRUE, )
-      # prp(tree_r,
-      #     box.palette = "BuGn",
-      #     # box.palette = "auto",
-      #     split.box.col = "lightgray",
-      #     split.border.col = "darkgray",
-      #     branch.type = 5,
-      #     # uniform=TRUE
-      # , snip = TRUE
-      # )
     })
     
     # INFOTEXT NEXT BEST FEATURE
-    
     
     featSuggestion <- rpart.rules(tree_r)[[3]][1] # Feature by tree
     possibleFeatures <- as.vector(unique(df_sub[[featSuggestion]]))
@@ -605,46 +501,31 @@ server <- function(input, output, session) {
     print("Split VAUES: ")
     print(featSuggestionTree)
     # feature values where to split
+    
     feat_diff <- possibleFeatures[!possibleFeatures %in% featSuggestionTree]
     print(c("feat diff",feat_diff))
     suggestionText <- paste("Next best feature by regression Tree: \n", featSuggestion,"\nConsider feature values:\n")
     
-    # print("For schleife")
     for (f in feat_diff){
-      # print(f)
       suggestionText <- paste(suggestionText, f)
     }
-
-    
-    
-    # print(suggestionText)
-    # print(feat_diff)
-    # t <- paste(feat_diff)
-    # print(t)
-    # suggestionText <- paste(suggestionText, t)
     
     output$treeSuggestion <- renderText(suggestionText)
     
-    
-            
-   
     #########################################################
-    
-    
     
     # PLOT SANKEY
     output$sankeyPlot <- renderPlot({
       sankey_cols <- input$bucketLHS
       # sankey_cols<-selectedHier
       dats_all <- d %>%      
-        group_by_at(vars(one_of(sankey_cols)))%>%  # group them# 
-        # group_by( vars(sankey_cols)) %>%  # group them
-        summarise(Freq = FAULT_COUNT) 
+        group_by_at(vars(one_of(sankey_cols)))%>%  # group them ..
+        summarise(Freq = FAULT_COUNT) # .. and summarise
       
       # SANKEY PLOT
       l <- length(sankey_cols)
       
-      # color managing
+      # color managing - for some reason working proper in R Studio but not in webbrowser
       color_feature <- selectedHier[1] # which feature should be colored
       color_classes <- names(table(dats_all[,color_feature])) # which unique values has a feature
       ncolors <- length(color_classes) # how many fetures 
@@ -671,19 +552,16 @@ server <- function(input, output, session) {
       alluvial( dats_all[,1:l],
                 freq=dats_all$Freq,
                 border= NA ,
-                col = dats_all$colorClass[,1],#color_plate[match(dats_all[color_feature], color_classes)],sep=""),#ifelse( dats_all$AGE == "*", "Red", "purple"),
+                col = dats_all$colorClass[,1],
                 alpha = 0.7
 
-      ) #+ geom_alluvium(aes(fill = FAULT_TYPE), width = 1/12)
-      
+      ) 
     })
     
   })
   
   
-  
-  
-  
+
   # Textfield - rule count
   output$ruleCount <- renderText({
     
@@ -692,39 +570,25 @@ server <- function(input, output, session) {
     txt}
   )
   
-# 
-#  output$treeSuggestion <- renderText(
-#    {
-#      "Here my suggestion!"
-#    }
-#  )
-  
   output$decisionTreeRegression <- renderPlot({
-    #selectedHier <<- input$bucketLHS
-    #äropcols <- append(selectedHier)
     
     df_sub <-rv$data[, interesting_cols]
     df_sub <- subset(df_sub, select= -c(rules,support,confidence,
                                     lift,FAULT_COUNT, OBJECT_COUNT
-                                    #FAULT_RATE#
                                     ,AGGREGATION_LEVEL,SET_SIZE
     ))
     
-#    print(df_sub)
     tree_r<- rpart(
       FAULT_RATE ~ .,
-      #FAULT_TYPE ~ .,
       data = df_sub,
-      method = "anova",# "class",
+      method = "anova",
       maxdepth = 3)
     
-   
 
     prp(tree_r,
             box.palette = "Reds",
             extra=101, #number and percentage of objects
-            # box.palette = "auto",
-          compress = TRUE,
+            compress = TRUE,
             split.box.col = "lightgray",
             split.border.col = "darkgray",
     )
@@ -732,8 +596,7 @@ server <- function(input, output, session) {
     
   }) 
   output$decisionTreeClass <- renderPlot({
-    #selectedHier <<- input$bucketLHS
-    #äropcols <- append(selectedHier)
+
     df_sub <- rv$data[, interesting_cols]
     df_sub <- subset(df_sub, select= -c(rules,support,confidence,
                                          lift,FAULT_COUNT, OBJECT_COUNT
@@ -743,7 +606,6 @@ server <- function(input, output, session) {
 
     
     tree_c<- rpart(
-      #FAULT_RATE ~ .,
       FAULT_TYPE ~ .,
       data = df_sub,
       method = "class",
@@ -752,101 +614,32 @@ server <- function(input, output, session) {
     prp(tree_c,
             box.palette = "Reds",
             extra = 8, # prop of fitted class --> accuracy
-            # box.palette = "auto",
             split.box.col = "lightgray",
             split.border.col = "darkgray",
     )
     
   }) 
   
- 
-  # output$Scatter <- renderPlotly(
-  #   {
-  #     # Get x and y axis, and find last part from supp conf lift in zaxis
-  #     xaxis <- input$scatterX
-  #     yaxis <- input$scatterY
-  #     zaxis <- supconflif[supconflif != c(xaxis, yaxis)]
-  #     
-  #     print(paste("X: ", xaxis, " Y: ", yaxis, " Z: ", zaxis))
-  #     
-  #     d <-as.data.frame( rv$data)
-  #     plot_ly(data = d , x = d[,xaxis], y = d[,yaxis], color = d[,zaxis])
-  #     #~FAULT_TYPE)
-  #   }
-  # )
-  
-
-  # output$fileTable <- renderTable(
-  #   {
-  #    # req(input$fileIn)
-  #     # when reading semicolon separated files,
-  #     # having a comma separator causes `read.csv` to error
-  #     tryCatch(
-  #       {
-  #         # df <<- read.csv(input$fileIn$datapath,
-  #                        # sep = ",")
-  #         # model.data <-reactive(df)
-  #         df <- rv$data
-  #         data()
-  #        print(sum(df$support))
-  #        rv$data
-  #       },
-  #       error = function(e) {
-  #         # return a safeError if a parsing error occurs
-  #         stop(safeError(e))
-  #       }
-  #     )
-  #   }
-  # ) # end fileTable
-  
   output$fileTable2 <- DT::renderDT(
     options = list(scrollX = T),
     rv$data,
     filter = "top",
     )
-  
-  
-  
-  
+
   #### PLOTS 
-  
-  
-  
-  
  
   getPlot <- function(feature, showLegend ){
     # Create a barplot by given feature
-    
-    # d1<-getSubset(name = input$dropdown_plots1)
-    # d2<-getSubset(name = input$dropdown_plots2)
-    # 
-  
-    print("Plot Feature:")
-    # print(compare_data$d1)
+
     d1<-compare_data$d1
     d2<-compare_data$d2
     
-    print(c("Number of FAULTTYPE D1:",unique(d1$FAULT_TYPE)))
-    print(c("Number of FAULTTYPE D2:",unique(d2$FAULT_TYPE)))
-    
-    # t$Freq <- as.data.frame( table(d1[feature]))
-    # t$Freq2 <- table(d2[feature])$Freq
-    
-    
-    # t <- as.data.frame(table(d1[feature]))
-    # t$Freq2 <- as.data.frame(table(d2[feature]))$Freq
-    
-    # t$Freq <- as.data.frame(asRelativeValues( table(d1[feature])))[,1]
-    # t$Freq2 <- asRelativeValues( as.data.frame(table(d2[feature]))$Freq)
-    
-    
+
     t1 <- as.data.frame(table(d1[feature]))
     t2 <- as.data.frame(table(d2[feature]))
     tj <- merge(t1, t2, by = "Var1", all = T)
     tj[is.na(tj)] <- 0
-    print(tj)
     
-    # 
     if (input$dropdown_absRel =='relative'){
       
       tj$Freq.x <- asRelativeValues(tj$Freq.x)
@@ -887,7 +680,7 @@ server <- function(input, output, session) {
   }
   
   toTransactions <- function(df_trans){
-    # df_trans <- df
+    
     cars_data_full <- df_trans[rep(seq_len(nrow(df_trans)), df_trans$FAULT_COUNT),]
     if (nrow(cars_data_full)>0){
     cars_data_full <- subset(cars_data_full, select=-c(AGGREGATION_LEVEL, 
@@ -898,35 +691,22 @@ server <- function(input, output, session) {
       rules <- apriori(cars_data_full_t, parameter = list(supp = 0.2, conf = 0.3))
       
       rules<-subset(rules, subset=rhs %pin% "FAULT_TYPE=" )
-      print(c("rules", length(rules)))
-      
-      # output$rules_graph <- renderUI({plot(rules, method = "graph", engine ="htmlwidget") })
+
       output$rules_graph <- renderVisNetwork({plot(rules, method = "graph"
                                                 , engine = "visNetwork"
-                                              # , engine = "htmlwidget"
                                               )})
       
-      
-      
-      # return (rules)
-      
     }
-    # plot(rules, method = "matrix",  engine = "htmlwidget") 
     
   }
     
  createPlots <- function(){
-   # print(paste("make plots", input$dropdown_plots1))
-   # print(as.data.frame(getSubset(name =  input$dropdown_plots1)))
+   # create plots for the 'Plots' ribbon
    
-   
-   # if(input$dropdown_plots1 != input$dropdown_plots2){
      compare_data$d1 <- as.data.frame(getSubset(name =  input$dropdown_plots1))
      compare_data$d2 <- as.data.frame(getSubset(name =  input$dropdown_plots2))
     
      toTransactions(compare_data$d1)
-     # 
-
 
      output[["plots_info"]] <- renderText({""})
      output[["plots_1"]] <- renderPlotly({getPlot(categoricalFeatures[1], TRUE)})
@@ -938,13 +718,7 @@ server <- function(input, output, session) {
      output[["plots_6"]] <- renderPlotly({getPlot(categoricalFeatures[6], FALSE)})
      output[["plots_7"]] <- renderPlotly({getPlot(categoricalFeatures[8], FALSE)})
      output[["plots_8"]] <- renderPlotly({getPlot(categoricalFeatures[7], FALSE)})
-   # }else{
-   #   output[["plots_info"]] <- renderText({"Please select a different subset to compare."})
-   #   
-   # }
-   
-   
-  
+
   }
   
   observeEvent(input$dropdown_plots1, {
@@ -952,8 +726,6 @@ server <- function(input, output, session) {
     print(input$dropdown_plots1)
     
     createPlots()
-   # print(getSubset(name = input$dropdown_subsets))
-  #  rv$data <- as.data.frame(getSubset(name = input$dropdown_subsets))
     
   })
   
@@ -962,53 +734,7 @@ server <- function(input, output, session) {
     print(input$dropdown_plots2)
     
     createPlots()
-    # print(getSubset(name = input$dropdown_subsets))
-    #  rv$data <- as.data.frame(getSubset(name = input$dropdown_subsets))
     
   })
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-# IDEA FROM https://stackoverflow.com/questions/38511717/how-do-i-get-the-data-from-the-selected-rows-of-a-filtered-datatable-dt  
-  # # tableSelected <- reactive({
-  # #   ids <- input$fileTable2_rows_selected
-  # #   d <- rv$data
-  # #   d[ids,]
-  # # })
-  # 
-  # # output$tableSelected <- DT::renderDataTable({
-  # #   DT::datatable(
-  # #     options = list(scrollX = T),
-  # #     tableSelected(),
-  # #     
-  # #     selection = list(mode = "multiple"),
-  # #     caption = "Selected Rows from  Data Table above"
-  # #   )
-  # # })
-  
-  # output$d3_test <- renderD3({
-  #   print("D3 stuff")
-  #   
-  #   
-  #   exclusion(df) <- NULL
-  #   d = 
-  #   r2d3(
-  #     as_d3_data(df$lift),
-  #     "barchart.js"
-  #     
-  #   )
-  # }
-  # )
-  
   
 } # end server
